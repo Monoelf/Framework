@@ -1,0 +1,33 @@
+{
+    "name": "devonty/calculator.efko.ru",
+    "autoload": {
+        "psr-4": {
+            "Monoelf\\Framework\\": ""
+        }
+    },
+    "authors": [
+        {
+            "name": "a.elfimov",
+            "email": "a.elfimov@efko.ru"
+        },
+        {
+            "name": "v.monolit",
+            "email": "v.monolit@efko.ru"
+        }
+    ],
+    "require-dev": {
+        "symfony/var-dumper": "^7.2",
+        "phpunit/phpunit": "^9",
+        "codeception/codeception": "^5.3",
+        "codeception/module-phpbrowser": "*",
+        "codeception/module-asserts": "^3.2"
+    },
+    "require": {
+        "psr/http-message": "^2.0",
+        "psr/container": "^2.0",
+        "ext-posix": "*"
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
