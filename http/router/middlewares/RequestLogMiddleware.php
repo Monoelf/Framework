@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\router\middlewares;
 
-Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
-Monoelf\Framework\event_dispatcher\Message;
-Monoelf\Framework\http\router\MiddlewareInterface;
-Monoelf\Framework\http\ServerResponseInterface;
-Monoelf\Framework\logger\LogContextEvent;
-Monoelf\Framework\logger\LoggerInterface;
+use Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
+use Monoelf\Framework\event_dispatcher\Message;
+use Monoelf\Framework\http\router\MiddlewareInterface;
+use Monoelf\Framework\http\ServerResponseInterface;
+use Monoelf\Framework\logger\LogContextEvent;
+use Monoelf\Framework\logger\LoggerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class RequestLogMiddleware implements MiddlewareInterface

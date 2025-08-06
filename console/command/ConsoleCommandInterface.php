@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\console\command;
 
-Monoelf\Framework\console\ConsoleInputInterface;
-Monoelf\Framework\console\ConsoleOutputInterface;
+use Monoelf\Framework\console\ConsoleInputInterface;
+use Monoelf\Framework\console\ConsoleOutputInterface;
 
 interface ConsoleCommandInterface
 {

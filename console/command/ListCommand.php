@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\console\command;
 
-Monoelf\Framework\console\ColorsEnum;
-Monoelf\Framework\console\ConsoleInputInterface;
-Monoelf\Framework\console\ConsoleKernelInterface;
-Monoelf\Framework\console\ConsoleOutputInterface;
+use Monoelf\Framework\console\ColorsEnum;
+use Monoelf\Framework\console\ConsoleInputInterface;
+use Monoelf\Framework\console\ConsoleKernelInterface;
+use Monoelf\Framework\console\ConsoleOutputInterface;
 
 final class ListCommand implements ConsoleCommandInterface
 {

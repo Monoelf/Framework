@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\tests\Unit;
 
-Monoelf\Framework\modules\calculation_mode_generator\dto\CalculatorDTO;
-Monoelf\Framework\modules\calculation_mode_generator\dto\OperationDTO;
-Monoelf\Framework\modules\calculation_mode_generator\exceptions\NextCombinationNotExists;
-Monoelf\Framework\modules\calculation_mode_generator\exceptions\StrategyNotExecutedException;
-Monoelf\Framework\modules\calculation_mode_generator\Handler;
-Monoelf\Framework\modules\calculation_mode_generator\strategies\OperationStrategy;
-Monoelf\Framework\modules\calculation_mode_generator\strategies\storage\StrategyStorageInterface;
+use Monoelf\Framework\modules\calculation_mode_generator\dto\CalculatorDTO;
+use Monoelf\Framework\modules\calculation_mode_generator\dto\OperationDTO;
+use Monoelf\Framework\modules\calculation_mode_generator\exceptions\NextCombinationNotExists;
+use Monoelf\Framework\modules\calculation_mode_generator\exceptions\StrategyNotExecutedException;
+use Monoelf\Framework\modules\calculation_mode_generator\Handler;
+use Monoelf\Framework\modules\calculation_mode_generator\strategies\OperationStrategy;
+use Monoelf\Framework\modules\calculation_mode_generator\strategies\storage\StrategyStorageInterface;
 use Codeception\Test\Unit;
 use PHPUnit\Framework\MockObject\MockObject;
 

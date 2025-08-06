@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\tests\Unit;
 
-Monoelf\Framework\modules\calculation_mode_generator\dto\OperationDTO;
-Monoelf\Framework\modules\calculation_mode_generator\exceptions\StrategyNotExecutedException;
-Monoelf\Framework\modules\calculation_mode_generator\strategies\SubtractionStrategy;
+use Monoelf\Framework\modules\calculation_mode_generator\dto\OperationDTO;
+use Monoelf\Framework\modules\calculation_mode_generator\exceptions\StrategyNotExecutedException;
+use Monoelf\Framework\modules\calculation_mode_generator\strategies\SubtractionStrategy;
 use Codeception\Test\Unit;
 
 final class SubtractionStrategyTest extends Unit

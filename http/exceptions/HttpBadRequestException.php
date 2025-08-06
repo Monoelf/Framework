@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\exceptions;
 
-Monoelf\Framework\http\StatusCodeEnum;
+use Monoelf\Framework\http\StatusCodeEnum;
 
 final class HttpBadRequestException extends HttpException
 {

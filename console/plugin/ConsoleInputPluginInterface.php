@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\console\plugin;
 
-Monoelf\Framework\console\ConsoleInputInterface;
-Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
+use Monoelf\Framework\console\ConsoleInputInterface;
+use Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
 
 interface ConsoleInputPluginInterface
 {

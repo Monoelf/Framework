@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Unit;
 
-Monoelf\Framework\container\ContainerInterface;
-Monoelf\Framework\event_dispatcher\EventDispatcher;
-Monoelf\Framework\event_dispatcher\Message;
-Monoelf\Framework\event_dispatcher\ObserverInterface;
+use Monoelf\Framework\container\ContainerInterface;
+use Monoelf\Framework\event_dispatcher\EventDispatcher;
+use Monoelf\Framework\event_dispatcher\Message;
+use Monoelf\Framework\event_dispatcher\ObserverInterface;
 use Codeception\Test\Unit;
 final class EventDispatcherTest extends Unit
 {

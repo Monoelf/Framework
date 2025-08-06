@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\tests\Support;
 
-Monoelf\Framework\tests\Support\_generated\UnitTesterActions;
+use Monoelf\Framework\tests\Support\_generated\UnitTesterActions;
 use Codeception\Actor;
 
 /**

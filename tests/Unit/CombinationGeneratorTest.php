@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\tests\Unit;
 
-Monoelf\Framework\modules\calculation_mode_generator\exceptions\NextCombinationNotExists;
-Monoelf\Framework\modules\calculation_mode_generator\strategies\storage\CombinationGenerator;
+use Monoelf\Framework\modules\calculation_mode_generator\exceptions\NextCombinationNotExists;
+use Monoelf\Framework\modules\calculation_mode_generator\strategies\storage\CombinationGenerator;
 use Codeception\Test\Unit;
 
 final class CombinationGeneratorTest extends Unit

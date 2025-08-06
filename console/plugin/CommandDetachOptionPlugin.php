@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\console\plugin;
 
-Monoelf\Framework\console\command\OptionDTO;
-Monoelf\Framework\console\ConsoleEvent;
-Monoelf\Framework\console\ConsoleInputInterface;
-Monoelf\Framework\console\ConsoleOutputInterface;
-Monoelf\Framework\console\plugin\ConsoleInputPluginInterface;
-Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
-Monoelf\Framework\event_dispatcher\Message;
-Monoelf\Framework\event_dispatcher\ObserverInterface;
+use Monoelf\Framework\console\command\OptionDTO;
+use Monoelf\Framework\console\ConsoleEvent;
+use Monoelf\Framework\console\ConsoleInputInterface;
+use Monoelf\Framework\console\ConsoleOutputInterface;
+use Monoelf\Framework\console\plugin\ConsoleInputPluginInterface;
+use Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
+use Monoelf\Framework\event_dispatcher\Message;
+use Monoelf\Framework\event_dispatcher\ObserverInterface;
 
 final class CommandDetachOptionPlugin implements ConsoleInputPluginInterface, ObserverInterface
 {

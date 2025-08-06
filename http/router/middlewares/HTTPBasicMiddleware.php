@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\router\middlewares;
 
-Monoelf\Framework\config_storage\ConfigurationStorage;
-Monoelf\Framework\http\exceptions\HttpUnauthorizedException;
-Monoelf\Framework\http\router\MiddlewareInterface;
-Monoelf\Framework\http\ServerResponseInterface;
+use Monoelf\Framework\config_storage\ConfigurationStorage;
+use Monoelf\Framework\http\exceptions\HttpUnauthorizedException;
+use Monoelf\Framework\http\router\MiddlewareInterface;
+use Monoelf\Framework\http\ServerResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class HTTPBasicMiddleware implements MiddlewareInterface

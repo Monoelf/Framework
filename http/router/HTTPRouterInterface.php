@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\router;
 
-Monoelf\Framework\http\exceptions\HttpNotFoundException;
+use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use Psr\Http\Message\ServerRequestInterface;
 
 interface HTTPRouterInterface
