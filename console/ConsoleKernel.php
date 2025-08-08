@@ -61,7 +61,7 @@ final class ConsoleKernel implements ConsoleKernelInterface
 
         try {
             $commandName = $this->commandMap[$commandFullName[0]][$commandFullName[1]]
-                ?? throw new \InvalidArgumentException(sprintf("Команда %s не найдена", implode($commandFullName)));
+                ?? throw new \InvalidArgumentException(sprintf("Команда %s не найдена", implode(':', $commandFullName)));
 
             $this->input->addPlugins($this->inputPlugins);
 
