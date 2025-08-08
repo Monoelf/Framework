@@ -30,7 +30,7 @@ final class AliasManager
 
     public function addAlias(string $alias, string $path): void
     {
-        $this->aliases[$alias] = str_starts_with($path, '@') === true ? $this->buildPath($path) : $path;
+        $this->aliases[$alias] = $this->hasAlias($path) === true ? $this->buildPath($path) : $path;
     }
 
     public function buildPath(string $path): string
@@ -39,12 +39,18 @@ final class AliasManager
             throw new \InvalidArgumentException('Алиас не указан');
         }
 
-        $alias = substr($path, 0, strpos($path, '/'));
+        $slashPos = strpos($path, '/');
+        $alias = $slashPos === false ? $path : substr($path, 0, $slashPos);
 
         if (isset($this->aliases[$alias]) === false || is_string($this->aliases[$alias]) === false) {
             throw new \InvalidArgumentException("Алиас '$alias' не задан или задан некорректно");
         }
 
         return str_replace($alias, $this->aliases[$alias], $path);
+    }
+
+    public function hasAlias(string $path): bool
+    {
+        return str_starts_with($path, '@') === true;
     }
 }

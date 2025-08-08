@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\console;
 
+use Monoelf\Framework\common\AliasManager;
 use Monoelf\Framework\common\ErrorHandlerInterface;
 use Monoelf\Framework\common\ModuleInterface;
 use Monoelf\Framework\console\command\CommandDefinition;
@@ -22,6 +23,7 @@ final class ConsoleKernel implements ConsoleKernelInterface
         private readonly ConsoleOutputInterface $output,
         private readonly LoggerInterface $logger,
         private readonly ErrorHandlerInterface $errorHandler,
+        private readonly AliasManager $aliasManager,
         private readonly ?string $appName = null,
         private readonly ?string $version = null,
         private readonly array $inputPlugins = [],
@@ -57,10 +59,10 @@ final class ConsoleKernel implements ConsoleKernelInterface
     {
         $commandFullName = explode(':', $this->input->getFirstArgument() ?? $this->defaultCommand);
 
-        $commandName = $this->commandMap[$commandFullName[0]][$commandFullName[1]]
-            ?? throw new \InvalidArgumentException(sprintf("Команда %s не найдена", implode($commandFullName)));
-
         try {
+            $commandName = $this->commandMap[$commandFullName[0]][$commandFullName[1]]
+                ?? throw new \InvalidArgumentException(sprintf("Команда %s не найдена", implode(':', $commandFullName)));
+
             $this->input->addPlugins($this->inputPlugins);
 
             $command = $this->container->get($commandName);
@@ -106,11 +108,16 @@ final class ConsoleKernel implements ConsoleKernelInterface
      */
     private function registerCommandNamespace(string $commandNameSpace): void
     {
+        $commandNameSpace = $this->aliasManager->hasAlias($commandNameSpace) === true
+            ? $this->aliasManager->buildPath($commandNameSpace)
+            : $commandNameSpace;
+
         $possibleCommandFiles = glob($commandNameSpace . '/*.php');
+        $rootPath = $this->aliasManager->buildPath('@app/');
 
         foreach ($possibleCommandFiles as $possibleCommandFile) {
             $commandPath = dirname($possibleCommandFile) . '/' . basename($possibleCommandFile, '.php');
-            $commandPath = str_replace(PROJECT_ROOT, 'app\\', $commandPath);
+            $commandPath = str_replace($rootPath, 'app\\', $commandPath);
             $commandPath = str_replace('/', '\\', $commandPath);
 
             if (class_exists($commandPath) === false) {

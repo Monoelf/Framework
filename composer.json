@@ -29,5 +29,14 @@
     },
     "scripts": {
         "test": "phpunit"
+    },
+    "archive": {
+        "exclude": [
+            "/tests",
+            "/tests/*",
+            "/codeception.yml",
+            ".gitignore",
+            "/*.dist"
+        ]
     }
 }
