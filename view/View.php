@@ -17,7 +17,7 @@ class View implements ViewInterface
 
     public function render(string $view, array $params = []): string
     {
-        if (str_starts_with($view, '@') === false) {
+        if ($this->aliasManager->hasAlias($view) === false) {
             $view = '@view/' . $view;
         }
 

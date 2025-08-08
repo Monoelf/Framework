@@ -108,11 +108,15 @@ final class ConsoleKernel implements ConsoleKernelInterface
      */
     private function registerCommandNamespace(string $commandNameSpace): void
     {
+        $commandNameSpace = $this->aliasManager->hasAlias($commandNameSpace) === true
+            ? $this->aliasManager->buildPath($commandNameSpace)
+            : $commandNameSpace;
+
         $possibleCommandFiles = glob($commandNameSpace . '/*.php');
+        $rootPath = $this->aliasManager->buildPath('@app/');
 
         foreach ($possibleCommandFiles as $possibleCommandFile) {
             $commandPath = dirname($possibleCommandFile) . '/' . basename($possibleCommandFile, '.php');
-            $rootPath = $this->aliasManager->buildPath('@app/');
             $commandPath = str_replace($rootPath, 'app\\', $commandPath);
             $commandPath = str_replace('/', '\\', $commandPath);
 
