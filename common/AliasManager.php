@@ -39,16 +39,14 @@ final class AliasManager
             throw new \InvalidArgumentException('Алиас не указан');
         }
 
-        $alias = substr($path, 0, strpos($path, '/'));
+        $slashPos = strpos($path, '/');
+        $alias = $slashPos === false ? $path : substr($path, 0, $slashPos);
 
         if (isset($this->aliases[$alias]) === false || is_string($this->aliases[$alias]) === false) {
             throw new \InvalidArgumentException("Алиас '$alias' не задан или задан некорректно");
         }
 
-        $builtPath = str_replace($alias, $this->aliases[$alias], $path);
-        $builtPath = str_replace('//', '/', $builtPath);
-
-        return $builtPath;
+        return str_replace($alias, $this->aliases[$alias], $path);
     }
 
     public function hasAlias(string $path): bool
