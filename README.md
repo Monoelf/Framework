@@ -8,7 +8,7 @@
 
 ### Читать вместе с документацией
 
-- [Репазиторий](https://github.com/Monoelf/Framework)
+- [Репозиторий](https://github.com/Monoelf/Framework)
 
 ## Установка
 
