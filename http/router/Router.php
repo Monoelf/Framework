@@ -140,6 +140,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
                     fn($key) => is_int($key) === false,
                     ARRAY_FILTER_USE_KEY
                 );
+                $pathParams = array_map('urldecode', $pathParams);
 
                 break;
             }
