@@ -13,7 +13,7 @@ use DateTimeZone;
 final class StdOutLogger extends AbstractLogger implements ObserverInterface
 {
     private array $context = [];
-    private string|array|null $extras = null;
+    private mixed $extras = null;
     private ?string $category = null;
     private array $listeners;
 
