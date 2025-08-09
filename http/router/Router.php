@@ -145,8 +145,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
             }
         }
 
-        $params = $this->mapParams($request->getQueryParams(), $route->params);
-        $params = array_merge($params, $pathParams);
+        $params = $this->mapParams(array_merge($request->getQueryParams(), $pathParams), $route->params);
 
         $middlewareChain = array_reduce(
             array_reverse($route->middlewares),
