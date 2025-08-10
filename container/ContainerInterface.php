@@ -31,7 +31,7 @@ interface ContainerInterface extends PsrContainerInterface
     /**
      * Переопределить синглтон экземпляр объекта от имени класса
      *
-     * @param string $dependencyName имя зависимости, для которой нужно создать объект
+     * @param string $dependencyName имя зависимости, для которой нужно переопределить объект
      * @param object $instance
      * @return void
      */
