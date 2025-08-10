@@ -67,12 +67,11 @@ final class HttpKernel implements HttpKernelInterface
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {
-            $response = $this->response
-                ->withStatus($e->getStatusCode(), $e->getMessage())
-                ->withHeader('Content-Type', $this->configurationStorage->getOrDefault(
-                    'HTTP_ERROR_CONTENT_TYPE',
-                    'text/html; charset=utf-8'
-                ));
+            $response = $this->response->withStatus($e->getStatusCode(), $e->getMessage());
+
+            if ($response->hasHeader('Content-Type') === false) {
+                $response = $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+            }
 
             $this->logger->error($e);
 
@@ -80,12 +79,14 @@ final class HttpKernel implements HttpKernelInterface
 
             $response->getBody()->write($body);
         } catch (\Throwable $e) {
-            $response = $this->response
-                ->withStatus(StatusCodeEnum::STATUS_INTERNAL_SERVER_ERROR->value, $e->getMessage())
-                ->withHeader('Content-Type',
-                    $this->configurationStorage->getOrDefault('HTTP_ERROR_CONTENT_TYPE')
-                    ?? 'text/html; charset=utf-8'
-                );
+            $response = $this->response->withStatus(
+                StatusCodeEnum::STATUS_INTERNAL_SERVER_ERROR->value,
+                $e->getMessage()
+            );
+
+            if ($response->hasHeader('Content-Type') === false) {
+                $response = $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+            }
 
             $this->logger->error($e);
 
