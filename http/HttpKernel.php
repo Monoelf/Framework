@@ -43,8 +43,8 @@ final class HttpKernel implements HttpKernelInterface
             $responseContentType = 'text/html; charset=utf-8';
 
             if ($result instanceof ResponseDto) {
-                $result = $result->responseBody;
                 $statusCode = $result->statusCode;
+                $result = $result->responseBody;
             }
 
             if (is_array($result) === true) {
