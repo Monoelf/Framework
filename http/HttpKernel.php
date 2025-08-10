@@ -66,7 +66,6 @@ final class HttpKernel implements HttpKernelInterface
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {
-            $isApi = $request->
             $response = $this->response
                 ->withStatus($e->getStatusCode(), $e->getMessage())
                 ->withHeader('Content-Type', $this->configurationStorage->getOrDefault(
