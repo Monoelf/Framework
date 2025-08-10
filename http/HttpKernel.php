@@ -8,6 +8,7 @@ use Monoelf\Framework\common\ErrorHandlerInterface;
 use Monoelf\Framework\common\ModuleInterface;
 use Monoelf\Framework\config_storage\ConfigurationStorage;
 use Monoelf\Framework\container\ContainerInterface;
+use Monoelf\Framework\http\dto\ResponseDto;
 use Monoelf\Framework\http\exceptions\HttpException;
 use Monoelf\Framework\http\exceptions\HttpNotAcceptableException;
 use Monoelf\Framework\http\HTTPKernelInterface;
@@ -38,15 +39,21 @@ final class HttpKernel implements HttpKernelInterface
             $result = $this->router->dispatch($request);
 
             $message = null;
-            $requestContentType = 'text/html; charset=utf-8';
+            $statusCode = StatusCodeEnum::STATUS_OK->value;
+            $responseContentType = 'text/html; charset=utf-8';
+
+            if ($result instanceof ResponseDto) {
+                $result = $result->responseBody;
+                $statusCode = $result->statusCode;
+            }
 
             if (is_array($result) === true) {
-                $requestContentType = 'application/json';
+                $responseContentType = 'application/json';
                 $message = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
 
             $isContentTypeAccepted = $this->isContentTypeAccepted(
-                $requestContentType,
+                $responseContentType,
                 $request->getHeader('Accept')
             );
 
@@ -55,8 +62,8 @@ final class HttpKernel implements HttpKernelInterface
             }
 
             $response = $this->response
-                ->withStatus(StatusCodeEnum::STATUS_OK->value)
-                ->withHeader('Content-Type', $requestContentType);
+                ->withStatus($statusCode)
+                ->withHeader('Content-Type', $responseContentType);
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {
