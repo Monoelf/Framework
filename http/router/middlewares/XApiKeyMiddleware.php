@@ -12,26 +12,22 @@ use Psr\Http\Message\ServerRequestInterface;
 
 final class XApiKeyMiddleware implements MiddlewareInterface
 {
-    public function __construct(private readonly ConfigurationStorage $configurationStorage) {}
+    public function __construct(
+        private readonly string $xApiKey,
+    ) {}
 
     /**
      * @throws HttpUnauthorizedException
      */
     public function __invoke(ServerRequestInterface $request, ServerResponseInterface $response, callable $next): void
     {
-        $apiKey = $request->getHeaderLine('X-API-KEY');
+        $xApiKey = $request->getHeaderLine('X-API-KEY');
 
-        if ($apiKey === '') {
+        if ($xApiKey === '') {
             throw new HttpUnauthorizedException('X-API-KEY отсутствует в заголовке запроса');
         }
 
-        $validApiKey = $this->configurationStorage->getOrDefault('API_AUTH_KEY');
-
-        if ($validApiKey === null) {
-            throw new \RuntimeException('Ключ X-API-KEY не настроен на сервере');
-        }
-
-        if ($validApiKey !== $apiKey) {
+        if ($this->xApiKey !== $xApiKey) {
             throw new HttpUnauthorizedException('Неверный X-API-KEY');
         }
 
