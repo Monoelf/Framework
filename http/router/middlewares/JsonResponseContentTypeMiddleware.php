@@ -19,21 +19,7 @@ final class JsonResponseContentTypeMiddleware implements MiddlewareInterface
      */
     public function __invoke(ServerRequestInterface $request, ServerResponseInterface $response, callable $next): void
     {
-        $apiKey = $request->getHeaderLine('X-API-KEY');
-
-        if ($apiKey === '') {
-            throw new HttpUnauthorizedException('X-API-KEY отсутствует в заголовке запроса');
-        }
-
-        $validApiKey = $this->configurationStorage->getOrDefault('API_AUTH_KEY');
-
-        if ($validApiKey === null) {
-            throw new \RuntimeException('Ключ X-API-KEY не настроен на сервере');
-        }
-
-        if ($validApiKey !== $apiKey) {
-            throw new HttpUnauthorizedException('Неверный X-API-KEY');
-        }
+        $response = $request->withHeader('Content-Type', 'application/json');
 
         $next($request, $response);
     }
