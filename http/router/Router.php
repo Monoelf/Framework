@@ -20,9 +20,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private array $groupStack = [];
 
-    public function __construct(private readonly ContainerInterface $container)
-    {
-    }
+    public function __construct(private readonly ContainerInterface $container) {}
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
