@@ -6,6 +6,7 @@ namespace Monoelf\Framework\http;
 
 use Monoelf\Framework\common\ErrorHandlerInterface;
 use Monoelf\Framework\common\ModuleInterface;
+use Monoelf\Framework\config_storage\ConfigurationStorage;
 use Monoelf\Framework\container\ContainerInterface;
 use Monoelf\Framework\http\exceptions\HttpException;
 use Monoelf\Framework\http\exceptions\HttpNotAcceptableException;
@@ -25,6 +26,7 @@ final class HttpKernel implements HttpKernelInterface
         private readonly LoggerInterface $logger,
         private readonly ErrorHandlerInterface $errorHandler,
         private readonly ContainerInterface $container,
+        private readonly ConfigurationStorage $configurationStorage,
         array $modules = [],
     ) {
         $this->initModules($modules);
@@ -60,7 +62,10 @@ final class HttpKernel implements HttpKernelInterface
         } catch (HttpException $e) {
             $response = $this->response
                 ->withStatus($e->getStatusCode(), $e->getMessage())
-                ->withHeader('Content-Type', 'text/html; charset=utf-8');
+                ->withHeader('Content-Type',
+                    $this->configurationStorage->getOrDefault('HTTP_ERROR_CONTENT_TYPE')
+                    ?? 'text/html; charset=utf-8'
+                );
 
             $this->logger->error($e);
 
@@ -70,7 +75,10 @@ final class HttpKernel implements HttpKernelInterface
         } catch (\Throwable $e) {
             $response = $this->response
                 ->withStatus(StatusCodeEnum::STATUS_INTERNAL_SERVER_ERROR->value, $e->getMessage())
-                ->withHeader('Content-Type', 'text/html; charset=utf-8');
+                ->withHeader('Content-Type',
+                    $this->configurationStorage->getOrDefault('HTTP_ERROR_CONTENT_TYPE')
+                    ?? 'text/html; charset=utf-8'
+                );
 
             $this->logger->error($e);
 
