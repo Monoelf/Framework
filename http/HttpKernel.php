@@ -22,7 +22,6 @@ use Psr\Http\Message\ServerRequestInterface;
 final class HttpKernel implements HttpKernelInterface
 {
     public function __construct(
-        private readonly ServerResponseInterface $response,
         private readonly HTTPRouterInterface $router,
         private readonly LoggerInterface $logger,
         private readonly ErrorHandlerInterface $errorHandler,
@@ -61,13 +60,17 @@ final class HttpKernel implements HttpKernelInterface
                 throw new HttpNotAcceptableException();
             }
 
-            $response = $this->response
+            $response = $this->container->get(ServerResponseInterface::class)
                 ->withStatus($statusCode)
                 ->withHeader('Content-Type', $responseContentType);
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {
-            $response = $this->response->withStatus($e->getStatusCode(), $e->getMessage());
+            $response = $this->container->get(ServerResponseInterface::class)
+                ->withStatus(
+                    $e->getStatusCode(),
+                    $e->getMessage()
+                );
 
             if ($response->hasHeader('Content-Type') === false) {
                 $response = $response->withHeader('Content-Type', 'text/html; charset=utf-8');
@@ -79,10 +82,11 @@ final class HttpKernel implements HttpKernelInterface
 
             $response->getBody()->write($body);
         } catch (\Throwable $e) {
-            $response = $this->response->withStatus(
-                StatusCodeEnum::STATUS_INTERNAL_SERVER_ERROR->value,
-                $e->getMessage()
-            );
+            $response = $this->container->get(ServerResponseInterface::class)
+                ->withStatus(
+                    StatusCodeEnum::STATUS_INTERNAL_SERVER_ERROR->value,
+                    $e->getMessage()
+                );
 
             if ($response->hasHeader('Content-Type') === false) {
                 $response = $response->withHeader('Content-Type', 'text/html; charset=utf-8');
