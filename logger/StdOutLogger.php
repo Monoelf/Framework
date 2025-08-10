@@ -26,7 +26,8 @@ final class StdOutLogger extends AbstractLogger implements ObserverInterface
     public function __construct(
         private readonly DebugTagStorageInterface $debugTagStorage,
         private readonly ConfigurationStorage $configurationStorage,
-        private readonly string $actionType
+        private readonly string $actionType,
+        private readonly string $projectIndex,
     ) {
         $this->stdOut = fopen('php://stdout', 'w');
 
@@ -83,7 +84,7 @@ final class StdOutLogger extends AbstractLogger implements ObserverInterface
             : ($_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null);
 
         $data = [
-            'index' => $this->configurationStorage->get('PROJECT_INDEX'),
+            'index' => $this->projectIndex,
             'category' => $this->category,
             'context' => implode(';', $this->context),
             'level' => LogLevel::getIndex($level),
