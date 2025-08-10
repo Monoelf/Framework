@@ -13,6 +13,7 @@ use Monoelf\Framework\http\exceptions\HttpException;
 use Monoelf\Framework\http\exceptions\HttpNotAcceptableException;
 use Monoelf\Framework\http\router\HTTPRouterInterface;
 use Monoelf\Framework\logger\LoggerInterface;
+use \Monoelf\Framework\http\HTTPKernelInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
