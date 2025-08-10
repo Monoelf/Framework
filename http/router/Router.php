@@ -162,8 +162,8 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
                 ServerRequestInterface $request,
                 ServerResponseInterface $response
             ) use ($container) {
-               $container->registerSingleton(ServerRequestInterface::class, $request);
-               $container->registerSingleton(ServerResponseInterface::class, $response);
+               $container->setSingleton(ServerRequestInterface::class, $request);
+               $container->setSingleton(ServerResponseInterface::class, $response);
             }
         );
 

@@ -29,11 +29,11 @@ interface ContainerInterface extends PsrContainerInterface
     public function call(object|string $handler, string $method, array $args = []): mixed;
 
     /**
-     * Регистрация экземпляра объекта в зависимости от имени класса
+     * Переопределить синглтон экземпляр объекта от имени класса
      *
      * @param string $dependencyName имя зависимости, для которой нужно создать объект
-     * @param array $args предподготовленные параметры конструктора
-     * @return object возвращает экземпляр объекта в зависимости от имени класса
+     * @param object $instance
+     * @return void
      */
-    public function registerSingleton(string $dependencyName, object $instance): void;
+    public function setSingleton(string $dependencyName, object $instance): void;
 }
