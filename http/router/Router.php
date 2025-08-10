@@ -20,7 +20,9 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private array $groupStack = [];
 
-    public function __construct(private readonly ContainerInterface $container) {}
+    public function __construct(private readonly ContainerInterface $container)
+    {
+    }
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
@@ -148,7 +150,6 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
         }
 
         $params = $this->mapParams(array_merge($request->getQueryParams(), $pathParams), $route->params);
-        $container = $this->container;
 
         $middlewareChain = array_reduce(
             array_reverse($route->middlewares),
@@ -161,9 +162,9 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
             function (
                 ServerRequestInterface $request,
                 ServerResponseInterface $response
-            ) use ($container) {
-               $container->setSingleton(ServerRequestInterface::class, $request);
-               $container->setSingleton(ServerResponseInterface::class, $response);
+            ) {
+                $this->container->setSingleton(ServerRequestInterface::class, $request);
+                $this->container->setSingleton(ServerResponseInterface::class, $response);
             }
         );
 
