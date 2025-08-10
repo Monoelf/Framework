@@ -15,7 +15,7 @@ interface ContainerInterface extends PsrContainerInterface
      * @param array $args предподготовленные параметры конструктора
      * @return object возвращает экземпляр объекта в зависимости от имени класса
      */
-    function build(string $dependencyName, array $args = []): object;
+    public function build(string $dependencyName, array $args = []): object;
 
     /**
      * Выполняет вызов указанного обработчика (callable или объекта)
@@ -26,5 +26,14 @@ interface ContainerInterface extends PsrContainerInterface
      * @param array $args предподготовленные параметры конструктора
      * @return mixed Результат выполнения обработчика
      */
-    function call(object|string $handler, string $method, array $args = []): mixed;
+    public function call(object|string $handler, string $method, array $args = []): mixed;
+
+    /**
+     * Переопределить синглтон экземпляр объекта от имени класса
+     *
+     * @param string $dependencyName имя зависимости, для которой нужно переопределить объект
+     * @param object $instance
+     * @return void
+     */
+    public function setSingleton(string $dependencyName, object $instance): void;
 }

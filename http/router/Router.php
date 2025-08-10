@@ -7,6 +7,7 @@ namespace Monoelf\Framework\http\router;
 use Monoelf\Framework\container\ContainerInterface;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use InvalidArgumentException;
+use Monoelf\Framework\http\ServerResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class Router implements HTTPRouterInterface, MiddlewareAssignable
@@ -86,10 +87,12 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
     {
         $method = strtoupper($method);
         $fullPath = $this->buildFullPath($path);
+        $regex = $this->buildRegexPath($fullPath);
 
         $route = new Route(
             $method,
             $fullPath,
+            $regex,
             $this->resolveHandler($handler),
             $this->middlewares,
             $this->prepareParams($path)
@@ -106,7 +109,19 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
     public function has(string $method, string $path): bool
     {
-        return isset($this->routes[strtoupper($method)][$path]);
+        $method = strtoupper($method);
+
+        if (isset($this->routes[$method]) === false) {
+            return false;
+        }
+
+        foreach ($this->routes[$method] as $possibleRoute) {
+            if (preg_match($possibleRoute->regex, $path) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function dispatch(ServerRequestInterface $request): mixed
@@ -114,23 +129,44 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
         $method = strtoupper($request->getMethod());
         $path = $request->getUri()->getPath();
 
-        if (isset($this->routes[$method][$path]) === false) {
+        if ($this->has($method, $path) === false) {
             throw new HttpNotFoundException("Маршрут не найден: {$method} {$path}");
         }
 
-        $route = $this->routes[$method][$path];
-        $params = $this->mapParams($request->getQueryParams(), $route->params);
+        foreach ($this->routes[$method] as $possibleRoute) {
+            if (preg_match($possibleRoute->regex, $path, $matches) === 1) {
+                $route = $possibleRoute;
+                $pathParams = array_filter(
+                    $matches,
+                    fn ($key) => is_int($key) === false,
+                    ARRAY_FILTER_USE_KEY
+                );
+                $pathParams = array_map('urldecode', $pathParams);
+
+                break;
+            }
+        }
+
+        $params = $this->mapParams(array_merge($request->getQueryParams(), $pathParams), $route->params);
 
         $middlewareChain = array_reduce(
             array_reverse($route->middlewares),
-            function (callable $next, string|callable $middleware) use ($request): callable {
-                $args = ['request' => $request, 'next' => $next];
-                return fn() => $this->container->call($middleware, '__invoke', $args);
+            function (callable $next, string|callable $middleware): callable {
+                return function (ServerRequestInterface $request, ServerResponseInterface $response) use ($middleware, $next) {
+                    $args = ['request' => $request, 'response' => $response, 'next' => $next];
+                    $this->container->call($middleware, '__invoke', $args);
+                };
             },
-            fn () => null
+            function (
+                ServerRequestInterface $request,
+                ServerResponseInterface $response
+            ) {
+                $this->container->setSingleton(ServerRequestInterface::class, $request);
+                $this->container->setSingleton(ServerResponseInterface::class, $response);
+            }
         );
 
-        $middlewareChain();
+        $this->container->call($middlewareChain, '__invoke', ['request' => $request]);
 
         return $this->container->call($route->handler[0], $route->handler[1], $params);
     }
@@ -265,5 +301,21 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
         }
 
         return $fullPath . $pathOnly;
+    }
+
+    /**
+     * Построение регулярки для пути с path параметрами на основе шаблона
+     *
+     * @param string $routeTemplate шаблон, пример: '/path/delete/{name}?{id}'
+     * @return string регулярка, пример '#^/path/delete/(?P<name>[^/]+)$#'
+     */
+    private function buildRegexPath(string $routeTemplate): string
+    {
+        $parts = explode('?', $routeTemplate, 2);
+        $pathPart = $parts[0];
+
+        $regex = preg_replace('#\{(\w+)\}#', '(?P<$1>[^/]+)', $pathPart);
+
+        return '#^' . $regex . '$#';
     }
 }

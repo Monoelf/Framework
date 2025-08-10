@@ -24,6 +24,17 @@ final class ServerRequest extends Message implements ServerRequestInterface
      */
     public static function fromGlobals(): self
     {
+        $parsedBody = $_POST;
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+
+        if (stripos($contentType, 'application/json') !== false) {
+            $decoded = json_decode(file_get_contents('php://input'), true);
+
+            if (is_null($decoded) === false) {
+                $parsedBody = $decoded;
+            }
+        }
+
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $uri = new Uri((string)($_SERVER['REQUEST_URI'] ?? '/'));
         $body = new Stream(fopen('php://input', 'rb'));
@@ -50,7 +61,7 @@ final class ServerRequest extends Message implements ServerRequestInterface
         return $request
             ->withQueryParams($_GET)
             ->withCookieParams($_COOKIE)
-            ->withParsedBody($_POST)
+            ->withParsedBody($parsedBody)
             ->withUploadedFiles($_FILES);
     }
 

@@ -55,7 +55,7 @@ final class DIContainer implements ContainerInterface
         }
 
         if (is_callable($dependency) === true) {
-            return $dependency($this);
+            return $this->call($dependency, '__invoke');
         }
 
         $reflection = new \ReflectionClass($dependency);
@@ -158,5 +158,13 @@ final class DIContainer implements ContainerInterface
         settype($value, $type->getName());
 
         return $value;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function setSingleton(string $dependencyName, object $instance): void
+    {
+        $this->singletons[$dependencyName] = $instance;
     }
 }

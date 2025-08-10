@@ -9,6 +9,7 @@ final class Route implements MiddlewareAssignable
     public function __construct(
         public string $method,
         public string $path,
+        public string $regex,
         public array  $handler,
         public array  $middlewares = [],
         public array  $params = [],
