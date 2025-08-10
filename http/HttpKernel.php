@@ -11,7 +11,6 @@ use Monoelf\Framework\container\ContainerInterface;
 use Monoelf\Framework\http\dto\ResponseDto;
 use Monoelf\Framework\http\exceptions\HttpException;
 use Monoelf\Framework\http\exceptions\HttpNotAcceptableException;
-use Monoelf\Framework\http\HTTPKernelInterface;
 use Monoelf\Framework\http\router\HTTPRouterInterface;
 use Monoelf\Framework\logger\LoggerInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -67,12 +66,13 @@ final class HttpKernel implements HttpKernelInterface
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {
+            $isApi = $request->
             $response = $this->response
                 ->withStatus($e->getStatusCode(), $e->getMessage())
-                ->withHeader('Content-Type',
-                    $this->configurationStorage->getOrDefault('HTTP_ERROR_CONTENT_TYPE')
-                    ?? 'text/html; charset=utf-8'
-                );
+                ->withHeader('Content-Type', $this->configurationStorage->getOrDefault(
+                    'HTTP_ERROR_CONTENT_TYPE',
+                    'text/html; charset=utf-8'
+                ));
 
             $this->logger->error($e);
 
