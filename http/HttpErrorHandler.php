@@ -23,7 +23,7 @@ final class HttpErrorHandler implements ErrorHandlerInterface
         $params = [
             'exception' => $throwable,
             'xDebugTag' => $this->debugTagStorage->getTag(),
-            'showTrace' => (int)$this->configurationStorage->get('DEBUG') === 1
+            'showTrace' => (int)$this->configurationStorage->getOrDefault('DEBUG', 0) === 1
         ];
 
         try {

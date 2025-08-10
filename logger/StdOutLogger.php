@@ -27,7 +27,7 @@ final class StdOutLogger extends AbstractLogger implements ObserverInterface
         private readonly DebugTagStorageInterface $debugTagStorage,
         private readonly ConfigurationStorage $configurationStorage,
         private readonly string $actionType,
-        private readonly string $projectIndex,
+            private readonly string $projectIndex,
     ) {
         $this->stdOut = fopen('php://stdout', 'w');
 
