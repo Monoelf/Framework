@@ -7,6 +7,7 @@ namespace Monoelf\Framework\http;
 enum StatusCodeEnum: int
 {
     case STATUS_OK = 200;
+    case STATUS_CREATED = 201;
     case STATUS_NO_CONTENT = 204;
     case STATUS_BAD_REQUEST = 400;
     case STATUS_UNAUTHORIZED = 401;
@@ -49,6 +50,7 @@ enum StatusCodeEnum: int
     {
         return match ($this) {
             self::STATUS_OK => 'OK',
+            self::STATUS_CREATED => 'Created',
             self::STATUS_NO_CONTENT => 'No Content',
             self::STATUS_BAD_REQUEST => 'Bad Request',
             self::STATUS_UNAUTHORIZED => 'Unauthorized',
