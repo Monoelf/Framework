@@ -19,7 +19,7 @@ final class JsonResponseContentTypeMiddleware implements MiddlewareInterface
      */
     public function __invoke(ServerRequestInterface $request, ServerResponseInterface $response, callable $next): void
     {
-        $response = $request->withHeader('Content-Type', 'application/json');
+        $response = $response->withHeader('Content-Type', 'application/json');
 
         $next($request, $response);
     }
