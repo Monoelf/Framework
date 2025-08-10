@@ -55,7 +55,7 @@ final class DIContainer implements ContainerInterface
         }
 
         if (is_callable($dependency) === true) {
-            return $dependency($this);
+            return $this->call($dependency, '__invoke');
         }
 
         $reflection = new \ReflectionClass($dependency);
