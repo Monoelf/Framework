@@ -159,4 +159,12 @@ final class DIContainer implements ContainerInterface
 
         return $value;
     }
+
+    /**
+     * @inheritDoc
+     */
+    public function registerSingleton(string $dependencyName, object $instance): void
+    {
+        $this->singletons[$dependencyName] = $instance;
+    }
 }

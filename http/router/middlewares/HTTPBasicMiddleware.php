@@ -35,6 +35,6 @@ final class HTTPBasicMiddleware implements MiddlewareInterface
             throw new HttpUnauthorizedException('Доступ запрещен! Авторизация не пройдена');
         }
 
-        $next();
+        $next($request, $response);
     }
 }

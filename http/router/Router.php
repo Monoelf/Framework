@@ -7,6 +7,7 @@ namespace Monoelf\Framework\http\router;
 use Monoelf\Framework\container\ContainerInterface;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use InvalidArgumentException;
+use Monoelf\Framework\http\ServerResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class Router implements HTTPRouterInterface, MiddlewareAssignable
@@ -19,7 +20,9 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private array $groupStack = [];
 
-    public function __construct(private readonly ContainerInterface $container) {}
+    public function __construct(private readonly ContainerInterface $container)
+    {
+    }
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
@@ -137,7 +140,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
                 $route = $possibleRoute;
                 $pathParams = array_filter(
                     $matches,
-                    fn($key) => is_int($key) === false,
+                    fn ($key) => is_int($key) === false,
                     ARRAY_FILTER_USE_KEY
                 );
                 $pathParams = array_map('urldecode', $pathParams);
@@ -150,11 +153,20 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
         $middlewareChain = array_reduce(
             array_reverse($route->middlewares),
-            function (callable $next, string|callable $middleware) use ($request): callable {
-                $args = ['request' => $request, 'next' => $next];
-                return fn() => $this->container->call($middleware, '__invoke', $args);
+            function (callable $next, string|callable $middleware): callable {
+                return function (ServerRequestInterface $request, ServerResponseInterface $response) use ($middleware, $next) {
+                    $args = ['request' => $request, 'response' => $response, 'next' => $next];
+                    $this->container->call($middleware, '__invoke', $args);
+                };
             },
-            fn () => null
+            function (
+                ContainerInterface $container,
+                ServerRequestInterface $request,
+                ServerResponseInterface $response
+            ) {
+               $container->registerSingleton(ServerRequestInterface::class, $request);
+               $container->registerSingleton(ServerResponseInterface::class, $response);
+            }
         );
 
         $middlewareChain();

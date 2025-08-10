@@ -25,6 +25,6 @@ final class RequestLogMiddleware implements MiddlewareInterface
         $this->logger->debug("Выполнено обращение методом {$request->getMethod()} к энпдоинту {$request->getUri()}");
         $this->eventDispatcher->trigger(LogContextEvent::FLUSH_CATEGORY);
 
-        $next();
+        $next($request, $response);
     }
 }
