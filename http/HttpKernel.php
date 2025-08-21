@@ -66,6 +66,10 @@ final class HttpKernel implements HttpKernelInterface
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {
+            $this->logger->error($e);
+
+            $body = $this->errorHandler->handle($e);
+
             $response = $this->container->get(ServerResponseInterface::class)
                 ->withStatus(
                     $e->getStatusCode(),
@@ -76,12 +80,12 @@ final class HttpKernel implements HttpKernelInterface
                 $response = $response->withHeader('Content-Type', 'text/html; charset=utf-8');
             }
 
+            $response->getBody()->write($body);
+        } catch (\Throwable $e) {
             $this->logger->error($e);
 
             $body = $this->errorHandler->handle($e);
 
-            $response->getBody()->write($body);
-        } catch (\Throwable $e) {
             $response = $this->container->get(ServerResponseInterface::class)
                 ->withStatus(
                     StatusCodeEnum::STATUS_INTERNAL_SERVER_ERROR->value,
@@ -91,10 +95,6 @@ final class HttpKernel implements HttpKernelInterface
             if ($response->hasHeader('Content-Type') === false) {
                 $response = $response->withHeader('Content-Type', 'text/html; charset=utf-8');
             }
-
-            $this->logger->error($e);
-
-            $body = $this->errorHandler->handle($e);
 
             $response->getBody()->write($body);
         }

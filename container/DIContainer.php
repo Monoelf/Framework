@@ -12,7 +12,7 @@ final class DIContainer implements ContainerInterface
     private static ?self $instance = null;
     private array $singletons = [];
 
-    protected function __construct(private readonly array $config = []) {}
+    protected function __construct(private array $config = []) {}
 
     /**
      * Запрещает клонирование объекта, являющегося синглтоном
@@ -102,8 +102,7 @@ final class DIContainer implements ContainerInterface
 
     public function has(string $id): bool
     {
-        return
-            array_key_exists($id, $this->config['singletons']) === true
+        return array_key_exists($id, $this->config['singletons']) === true
             || array_key_exists($id, $this->config['definitions']) === true;
     }
 
@@ -163,8 +162,9 @@ final class DIContainer implements ContainerInterface
     /**
      * @inheritDoc
      */
-    public function setSingleton(string $dependencyName, object $instance): void
+    public function registerSingleton(string $dependencyName, string|callable $dependency): void
     {
-        $this->singletons[$dependencyName] = $instance;
+        $this->config['singletons'][$dependencyName] = $dependency;
+        unset($this->singletons[$dependencyName]);
     }
 }
