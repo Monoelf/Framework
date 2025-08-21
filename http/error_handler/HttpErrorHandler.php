@@ -32,7 +32,7 @@ final class HttpErrorHandler implements ErrorHandlerInterface
         array $renderingStrategies = [],
         private string $mode = StrategyNameEnum::HTML->value,
     ) {
-        $this->renderingStrategies = array_merge_recursive($renderingStrategies, $this->defaultRenderingStrategies);
+        $this->renderingStrategies = array_merge_recursive($this->defaultRenderingStrategies, $renderingStrategies);
     }
 
     /**
@@ -41,17 +41,17 @@ final class HttpErrorHandler implements ErrorHandlerInterface
      */
     public function handle(\Throwable $throwable): string
     {
-        if (isset($this->renderingStrategies[$this->mode]) === false) {
-            throw new StrategyNotFoundException("Стратегия для режима {$this->mode} не найдена");
-        }
-
         try {
+            if (isset($this->renderingStrategies[$this->mode]) === false) {
+                throw new StrategyNotFoundException("Стратегия для режима {$this->mode} не найдена");
+            }
+
             return $this->container->call(
                 $this->renderingStrategies[$this->mode],
                 'execute',
                 ['throwable' => $throwable]
             );
-        } catch (ViewNotFoundException) {
+        } catch (ViewNotFoundException | StrategyNotFoundException) {
             return $this->view->render('@framework/http/error', [
                 'exception' => $throwable,
                 'xDebugTag' => $this->debugTagStorage->getTag(),

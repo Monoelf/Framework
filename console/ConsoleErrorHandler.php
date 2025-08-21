@@ -32,6 +32,6 @@ final class ConsoleErrorHandler implements ErrorHandlerInterface
 
     public function defineMode(string $mode): void
     {
-
+        throw new \BadMethodCallException("Метод defineMode() ещё не реализован.");
     }
 }
