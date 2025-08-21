@@ -28,7 +28,7 @@ final class HttpErrorHandler implements ErrorHandlerInterface
         private readonly DebugTagStorageInterface $debugTagStorage,
         private readonly ConfigurationStorage $configurationStorage,
         private readonly ContainerInterface $container,
-        array $renderingStrategies,
+        array $renderingStrategies = [],
         private string $mode = 'html',
     ) {
         $this->renderingStrategies = array_merge_recursive($renderingStrategies, $this->defaultRenderingStrategies);
