@@ -164,7 +164,7 @@ final class DIContainer implements ContainerInterface
      */
     public function registerSingleton(string $dependencyName, string|callable $dependency): void
     {
-        $this->config[$dependencyName] = $dependency;
+        $this->config['singletons'][$dependencyName] = $dependency;
         unset($this->singletons[$dependencyName]);
     }
 }
