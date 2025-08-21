@@ -13,4 +13,6 @@ interface ErrorHandlerInterface
      * @return string
      */
     public function handle(Throwable $throwable): string;
+
+    public function defineMode(string $mode): void;
 }

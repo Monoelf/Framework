@@ -29,4 +29,9 @@ final class ConsoleErrorHandler implements ErrorHandlerInterface
             return $this->renderer->render('@framework/console/error', $params);
         }
     }
+
+    public function defineMode(string $mode): void
+    {
+        throw new \BadMethodCallException("Метод defineMode() ещё не реализован.");
+    }
 }
