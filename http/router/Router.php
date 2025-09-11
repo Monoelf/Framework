@@ -228,22 +228,22 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      * ]
      */
     private function prepareParams(string $route): array
-{
-    preg_match_all('/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?\}/', $route, $matches, PREG_SET_ORDER);
+    {
+        preg_match_all('/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?\}/', $route, $matches, PREG_SET_ORDER);
 
-    $params = [];
+        $params = [];
 
-    foreach ($matches as $match) {
-        $params[] = [
-            'name' => $match[2],
-            'type' => $match[3] ?? 'string', // по умолчанию string
-            'required' => $match[1] !== '?',
-            'default' => $match[4] ?? null,
-        ];
+        foreach ($matches as $match) {
+            $params[] = [
+                'name' => $match[2],
+                'type' => $match[3] ?? 'string', // по умолчанию string
+                'required' => $match[1] !== '?',
+                'default' => $match[4] ?? null,
+            ];
+        }
+
+        return $params;
     }
-
-    return $params;
-}
 
 
     /**
