@@ -228,21 +228,23 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      * ]
      */
     private function prepareParams(string $route): array
-    {
-        preg_match_all('/\{(\??)(\w+)(?:=(\w+))?\}/', $route, $matches, PREG_SET_ORDER);
+{
+    preg_match_all('/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?\}/', $route, $matches, PREG_SET_ORDER);
 
-        $params = [];
+    $params = [];
 
-        foreach ($matches as $match) {
-            $params[] = [
-                'name' => $match[2],
-                'required' => $match[1] !== '?',
-                'default' => $match[3] ?? null,
-            ];
-        }
-
-        return $params;
+    foreach ($matches as $match) {
+        $params[] = [
+            'name' => $match[2],
+            'type' => $match[3] ?? 'string', // по умолчанию string
+            'required' => $match[1] !== '?',
+            'default' => $match[4] ?? null,
+        ];
     }
+
+    return $params;
+}
+
 
     /**
      * Получение значений параметров запроса определенных для маршрута
@@ -264,20 +266,40 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
         foreach ($params as $param) {
             $name = $param['name'];
+            $value = $queryParams[$name] ?? $param['default'];
 
-            if (array_key_exists($name, $queryParams) === true) {
-                $result[$name] = $queryParams[$name];
-                continue;
-            }
-
-            if ($param['required'] === true) {
+            if ($value === null && $param['required']) {
                 throw new InvalidArgumentException("Отсутствует обязательный параметр: {$name}");
             }
 
-            $result[$name] = $param['default'];
+            if ($value !== null) {
+                $value = $this->castParam($value, $param['type'], $name);
+            }
+
+            $result[$name] = $value;
         }
 
         return $result;
+    }
+
+    /**
+     * @param mixed $value
+     * @param string $type
+     * @param string $name
+     * @return mixed
+     */
+    private function castParam(mixed $value, string $type, string $name): mixed
+    {
+        return match ($type) {
+            'integer', 'int' => filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE)
+                ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть integer"),
+            'float', 'double' => filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE)
+                ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть float"),
+            'boolean', 'bool' => filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
+                ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть boolean"),
+            'string' => (string)$value,
+            default => throw new InvalidArgumentException("Неизвестный тип '{$type}' для параметра '{$name}'"),
+        };
     }
 
     /**
@@ -311,11 +333,28 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private function buildRegexPath(string $routeTemplate): string
     {
-        $parts = explode('?', $routeTemplate, 2);
-        $pathPart = $parts[0];
+        $regex = preg_replace_callback(
+            '/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?\}/',
+            function ($match) {
+                $name = $match[2];
 
-        $regex = preg_replace('#\{(\w+)\}#', '(?P<$1>[^/]+)', $pathPart);
+                return "(?P<{$name}>[^/]+)";
+            },
+            explode('?', $routeTemplate, 2)[0]
+        );
 
         return '#^' . $regex . '$#';
+    }
+
+
+    /**
+     * @param string $name
+     * @param string $controller
+     * @param array $config
+     * @return void
+     */
+    public function addResource(string $name, string $controller, array $config = []): void
+    {
+        (new Resource($name, $controller, $config))->build($this);
     }
 }
