@@ -229,7 +229,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private function prepareParams(string $route): array
     {
-        preg_match_all('/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?\}/', $route, $matches, PREG_SET_ORDER);
+        preg_match_all('/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?}/', $route, $matches, PREG_SET_ORDER);
 
         $params = [];
 
@@ -268,7 +268,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
             $name = $param['name'];
             $value = $queryParams[$name] ?? $param['default'];
 
-            if ($value === null && $param['required']) {
+            if ($value === null && $param['required'] === true) {
                 throw new InvalidArgumentException("Отсутствует обязательный параметр: {$name}");
             }
 
@@ -334,7 +334,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
     private function buildRegexPath(string $routeTemplate): string
     {
         $regex = preg_replace_callback(
-            '/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?\}/',
+            '/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?}/',
             function ($match) {
                 $name = $match[2];
 
