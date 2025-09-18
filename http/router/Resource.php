@@ -67,6 +67,7 @@ class Resource
                 'action' => 'actionUpdate',
                 'middleware' => [],
             ],
+            //TODO добавить как из задачи
             'patch' => [
                 'method' => 'PATCH',
                 'path' => "",
@@ -81,6 +82,8 @@ class Resource
             ],
         ];
 
+
+        //TODO не добавление, а обновление уже существующих методов
         foreach ($this->config as $newMethod => $elements) {
             if (isset($config[$newMethod]) === false) {
                 $config[$newMethod] = $elements;

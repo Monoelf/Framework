@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Monoelf\Framework\http\router;
 
 use Monoelf\Framework\container\ContainerInterface;
+use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use InvalidArgumentException;
 use Monoelf\Framework\http\ServerResponseInterface;
@@ -290,9 +291,10 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private function castParam(mixed $value, string $type, string $name): mixed
     {
+        //TODO поменять код ошибки
         return match ($type) {
             'integer', 'int' => filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE)
-                ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть integer"),
+                ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть integer"),
             'float', 'double' => filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE)
                 ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть float"),
             'boolean', 'bool' => filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
