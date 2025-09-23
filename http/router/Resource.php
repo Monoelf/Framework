@@ -35,7 +35,6 @@ class Resource
                 $fullPath = $path;
             }
 
-            // гарантируем, что путь начинается с /
             $fullPath = '/' . ltrim($fullPath, '/');
 
             $route = $router->add(
@@ -45,8 +44,11 @@ class Resource
             );
 
             if (empty($params['middleware']) === false) {
-                $route->addMiddleware($params['middleware']);
+                foreach ($params['middleware'] as $middleware) {
+                    $route->addMiddleware($middleware);
+                }
             }
+
         }
     }
 
@@ -100,8 +102,11 @@ class Resource
                 continue;
             }
 
-            foreach ($overrides as $key => $value) {
-                $config[$method][$key] = $value;
+            if (isset($overrides['middleware']) === true) {
+                $config[$method]['middleware'] = array_merge(
+                    $config[$method]['middleware'],
+                    (array)$overrides['middleware']
+                );
             }
         }
 
