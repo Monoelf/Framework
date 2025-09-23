@@ -14,8 +14,10 @@ class Resource
     public function __construct(
         private readonly string $name,
         private readonly string $controller,
-        private array $config = []
-    ) {}
+        private array           $config = []
+    )
+    {
+    }
 
     /**
      * @param HTTPRouterInterface $router
@@ -24,9 +26,21 @@ class Resource
     public function build(HTTPRouterInterface $router): void
     {
         foreach ($this->getConfiguration($this->name) as $params) {
+            $path = $params['path'];
+
+            $fullPath = rtrim($this->name, '/')
+                . ($path !== '' ? '/' . ltrim($path, '/') : '');
+
+            if (str_starts_with($path, $this->name)) {
+                $fullPath = $path;
+            }
+
+            // гарантируем, что путь начинается с /
+            $fullPath = '/' . ltrim($fullPath, '/');
+
             $route = $router->add(
                 $params['method'],
-                $this->name . ($params['path'] !== '' ? '/' . ltrim($params['path'], '/') : ''),
+                $fullPath,
                 $this->controller . '::' . $params['action']
             );
 
@@ -45,53 +59,50 @@ class Resource
         $config = [
             'index' => [
                 'method' => 'GET',
-                'path' =>'',
+                'path' => $path,
                 'action' => 'actionList',
                 'middleware' => [],
             ],
             'view' => [
                 'method' => 'GET',
-                'path' => "{:id|integer}",
+                'path' => "{$path}/{:id|integer}",
                 'action' => 'actionView',
                 'middleware' => [],
             ],
             'create' => [
                 'method' => 'POST',
-                'path' => '',
+                'path' => $path,
                 'action' => 'actionCreate',
                 'middleware' => [],
             ],
             'put' => [
                 'method' => 'PUT',
-                'path' => "{:id|integer}",
+                'path' => "{$path}/{:id|integer}",
                 'action' => 'actionUpdate',
                 'middleware' => [],
             ],
-            //TODO добавить как из задачи
             'patch' => [
                 'method' => 'PATCH',
-                'path' => "",
+                'path' => "{$path}/{:id|integer}",
                 'action' => 'actionPatch',
                 'middleware' => [],
             ],
             'delete' => [
                 'method' => 'DELETE',
-                'path' => "",
+                'path' => "{$path}/{:id|integer}",
                 'action' => 'actionDelete',
                 'middleware' => [],
             ],
         ];
 
-
-        //TODO не добавление, а обновление уже существующих методов
-        foreach ($this->config as $newMethod => $elements) {
-            if (isset($config[$newMethod]) === false) {
-                $config[$newMethod] = $elements;
-
+        foreach ($this->config as $method => $overrides) {
+            if (isset($config[$method]) === false) {
                 continue;
             }
 
-            $config[$newMethod] = array_merge($config[$newMethod], $elements);
+            foreach ($overrides as $key => $value) {
+                $config[$method][$key] = $value;
+            }
         }
 
         return $config;
