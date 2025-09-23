@@ -259,7 +259,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      * @return array
      * Пример:
      * ['firstNumber' => 700, 'secondNumber' => 900]
-     * @throws InvalidArgumentException если в строке запроса не передан параметр объявленный как обязательный
+     * @throws HttpBadRequestException
      */
     private function mapParams(array $queryParams, array $params): array
     {
@@ -288,19 +288,19 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      * @param string $type
      * @param string $name
      * @return mixed
+     * @throws HttpBadRequestException
      */
     private function castParam(mixed $value, string $type, string $name): mixed
     {
-        //TODO поменять код ошибки
         return match ($type) {
             'integer', 'int' => filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE)
                 ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть integer"),
             'float', 'double' => filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE)
-                ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть float"),
+                ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть float"),
             'boolean', 'bool' => filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
-                ?? throw new InvalidArgumentException("Параметр '{$name}' должен быть boolean"),
+                ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть boolean"),
             'string' => (string)$value,
-            default => throw new InvalidArgumentException("Неизвестный тип '{$type}' для параметра '{$name}'"),
+            default => throw new HttpBadRequestException("Неизвестный тип '{$type}' для параметра '{$name}'"),
         };
     }
 
