@@ -93,6 +93,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
         }
 
         $whereParts = [];
+
         foreach ($condition as $key => $value) {
             $param = 'where_' . count($bindings);
             $whereParts[] = "$key = :$param";
@@ -100,6 +101,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
         }
 
         $sql = 'UPDATE ' . $resource . ' SET ' . implode(', ', $setParts);
+
         if (empty($whereParts) === false) {
             $sql .= ' WHERE ' . implode(' AND ', $whereParts);
         }
@@ -119,7 +121,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function insert(string $resource, array $data): int
     {
         $columns = array_keys($data);
-        $params = array_map(fn($col) => ':' . $col, $columns);
+        $params = array_map(fn ($col) => ':' . $col, $columns);
 
         $sql = 'INSERT INTO ' . $resource
             . ' (' . implode(', ', $columns) . ') VALUES ('
@@ -195,7 +197,9 @@ class DataBaseConnection implements DataBaseConnectionInterface
     private function executeQuery(MysqlQueryBuilderInterface $query): PDOStatement
     {
         $statementParams = $query->getStatement();
+
         $statement = $this->connection->prepare($statementParams->sql);
+
         $statement->execute($statementParams->bindings);
 
         return $statement;
