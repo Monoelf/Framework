@@ -9,7 +9,9 @@ use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use InvalidArgumentException;
 use Monoelf\Framework\http\ServerResponseInterface;
+use Monoelf\Framework\validator\Validator;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 final class Router implements HTTPRouterInterface, MiddlewareAssignable
 {
@@ -21,7 +23,12 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private array $groupStack = [];
 
-    public function __construct(private readonly ContainerInterface $container) {}
+    public function __construct(
+        private readonly ContainerInterface $container,
+        private readonly Validator $validator,
+    )
+    {
+    }
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
@@ -139,7 +146,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
                 $route = $possibleRoute;
                 $pathParams = array_filter(
                     $matches,
-                    fn ($key) => is_int($key) === false,
+                    fn($key) => is_int($key) === false,
                     ARRAY_FILTER_USE_KEY
                 );
                 $pathParams = array_map('urldecode', $pathParams);
@@ -292,16 +299,14 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private function castParam(mixed $value, string $type, string $name): mixed
     {
-        return match ($type) {
-            'integer', 'int' => filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE)
-                ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть integer"),
-            'float', 'double' => filter_var($value, FILTER_VALIDATE_FLOAT, FILTER_NULL_ON_FAILURE)
-                ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть float"),
-            'boolean', 'bool' => filter_var($value, FILTER_VALIDATE_BOOL, FILTER_NULL_ON_FAILURE)
-                ?? throw new HttpBadRequestException("Параметр '{$name}' должен быть boolean"),
-            'string' => (string)$value,
-            default => throw new HttpBadRequestException("Неизвестный тип '{$type}' для параметра '{$name}'"),
-        };
+        try {
+            $this->validator->validate($value, $type);
+            return $value;
+        } catch (Throwable $e) {
+            throw new HttpBadRequestException(
+                "Ошибка валидации параметра '{$name}': " . $e->getMessage()
+            );
+        }
     }
 
     /**
