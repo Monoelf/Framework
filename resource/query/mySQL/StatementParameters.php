@@ -10,4 +10,14 @@ final readonly class StatementParameters
         public string $sql,
         public array $bindings
     ) {}
+
+    public function getSql(): string
+    {
+        return $this->sql;
+    }
+
+    public function getBindings(): array
+    {
+        return $this->bindings;
+    }
 }

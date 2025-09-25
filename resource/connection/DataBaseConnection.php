@@ -41,6 +41,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function select(QueryBuilderInterface $query): array
     {
         $statement = $this->executeQuery($query);
+
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -51,7 +52,9 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function selectOne(QueryBuilderInterface $query): ?array
     {
         $statement = $this->executeQuery($query);
+
         $result = $statement->fetch(PDO::FETCH_ASSOC);
+
         return $result ?: null;
     }
 
@@ -62,6 +65,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function selectColumn(QueryBuilderInterface $query): array
     {
         $statement = $this->executeQuery($query);
+
         return $statement->fetchAll(PDO::FETCH_COLUMN);
     }
 
@@ -72,6 +76,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function selectScalar(QueryBuilderInterface $query): mixed
     {
         $statement = $this->executeQuery($query);
+
         return $statement->fetchColumn();
     }
 
@@ -84,11 +89,14 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function update(string $resource, array $data, array $condition): int
     {
         $setParts = [];
+
         $bindings = [];
 
         foreach ($data as $key => $value) {
             $param = 'set_' . count($bindings);
+
             $setParts[] = "$key = :$param";
+
             $bindings[$param] = $value;
         }
 
@@ -96,7 +104,9 @@ class DataBaseConnection implements DataBaseConnectionInterface
 
         foreach ($condition as $key => $value) {
             $param = 'where_' . count($bindings);
+
             $whereParts[] = "$key = :$param";
+
             $bindings[$param] = $value;
         }
 
@@ -107,6 +117,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
         }
 
         $statement = $this->connection->prepare($sql);
+
         $statement->execute($bindings);
 
         return $statement->rowCount();
@@ -121,6 +132,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
     public function insert(string $resource, array $data): int
     {
         $columns = array_keys($data);
+
         $params = array_map(fn ($col) => ':' . $col, $columns);
 
         $sql = 'INSERT INTO ' . $resource
@@ -135,8 +147,10 @@ class DataBaseConnection implements DataBaseConnectionInterface
             $statement->execute($bindings);
         } catch (PDOException $e) {
             $errorInfo = $e->errorInfo;
+
             if (isset($errorInfo[0], $errorInfo[1])
                 && $errorInfo[0] === '23000'
+
                 && $errorInfo[1] === 1062
             ) {
                 throw new HttpBadRequestException(
@@ -166,7 +180,9 @@ class DataBaseConnection implements DataBaseConnectionInterface
 
         foreach ($condition as $key => $value) {
             $param = 'where_' . count($bindings);
+
             $whereParts[] = "$key = :$param";
+
             $bindings[$param] = $value;
         }
 
@@ -177,6 +193,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
         }
 
         $statement = $this->connection->prepare($sql);
+
         $statement->execute($bindings);
 
         return $statement->rowCount();
