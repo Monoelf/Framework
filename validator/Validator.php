@@ -23,11 +23,11 @@ final class Validator
         'safe' => SafeValidator::class,
     ];
 
-    private array $validators = [];
+    private array $validators;
 
     public function __construct(
+        private readonly ContainerInterface $container,
         array $validatorsConfig = [],
-        private ContainerInterface $container,
     ) {
         $this->validators = array_merge($this->defaultConfig, $validatorsConfig);
     }
