@@ -168,7 +168,7 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
 
             $isStringDirection = is_string($direction);
 
-            if ($isNumericArray && $isStringDirection) {
+            if ($isNumericArray === true && $isStringDirection === true) {
                 $parts = preg_split('/\s+/', trim($direction), 2);
 
                 $columnName = $parts[0];
@@ -176,7 +176,7 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
                 $dir = isset($parts[1]) ? strtoupper($parts[1]) : 'ASC';
             }
 
-            if (false === $isNumericArray) {
+            if ($isNumericArray === false) {
                 $columnName = $column;
 
                 $dir = $isStringDirection ? strtoupper(trim($direction)) : 'ASC';
@@ -184,7 +184,7 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
 
             $isEmptyColumnName = empty($columnName);
 
-            if ($isEmptyColumnName) {
+            if ($isEmptyColumnName === true) {
                 throw new InvalidArgumentException('Имя колонны должно быть заполнено');
             }
 
@@ -201,7 +201,7 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
 
         $hasOrderParts = empty($orderParts) === false;
 
-        if ($hasOrderParts) {
+        if ($hasOrderParts === true) {
             $this->orderBy = 'ORDER BY ' . implode(', ', $orderParts);
         }
 
@@ -260,11 +260,11 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
             return $field;
         }
 
-        if (preg_match('/^[a-z]+\(.*\)$/i', $field)) {
+        if ((bool)preg_match('/^[a-z]+\(.*\)$/i', $field) === true) {
             return $field;
         }
 
-        if (str_contains($field, '.')) {
+        if (str_contains($field, '.') === true) {
             $parts = explode('.', $field);
 
             return '`' . implode('`.`', array_map('trim', $parts)) . '`';
@@ -287,11 +287,11 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
         foreach ($bindings as $param => $value) {
             $escapedValue = null;
 
-            if (is_string($value)) {
+            if (is_string($value) === true) {
                 $escapedValue = "'" . str_replace("'", "''", $value) . "'";
             }
 
-            if (is_null($value)) {
+            if (is_null($value) === true) {
                 $escapedValue = 'NULL';
             }
 

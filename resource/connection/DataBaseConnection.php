@@ -148,7 +148,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
         } catch (PDOException $e) {
             $errorInfo = $e->errorInfo;
 
-            if (isset($errorInfo[0], $errorInfo[1])
+            if (isset($errorInfo[0], $errorInfo[1]) === true
                 && $errorInfo[0] === '23000'
 
                 && $errorInfo[1] === 1062

@@ -31,7 +31,7 @@ class Resource
             $fullPath = rtrim($this->name, '/')
                 . ($path !== '' ? '/' . ltrim($path, '/') : '');
 
-            if (str_starts_with($path, $this->name)) {
+            if (str_starts_with($path, $this->name) === true) {
                 $fullPath = $path;
             }
 
