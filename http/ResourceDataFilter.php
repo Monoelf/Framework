@@ -10,7 +10,7 @@ use Monoelf\Framework\resource\query\QueryBuilderInterface;
 use Monoelf\Framework\resource\ResourceDataFilterInterface;
 use RuntimeException;
 
-class ResourceDataFilter implements ResourceDataFilterInterface
+final class ResourceDataFilter implements ResourceDataFilterInterface
 {
     private string $resourceName;
     private array $accessibleFields = [];
@@ -18,8 +18,8 @@ class ResourceDataFilter implements ResourceDataFilterInterface
     private array $defaultConditions = [];
 
     public function __construct(
-        protected readonly DataBaseConnectionInterface $connection,
-        protected readonly QueryBuilderInterface $queryBuilder
+        private readonly DataBaseConnectionInterface $connection,
+        private readonly QueryBuilderInterface $queryBuilder
     ) {}
 
     /**
@@ -29,10 +29,11 @@ class ResourceDataFilter implements ResourceDataFilterInterface
     public function setResourceName(string $name): static
     {
         if (empty($name) === true) {
-            throw new InvalidArgumentException('Resource name cannot be empty');
+            throw new InvalidArgumentException('Имя ресурса должно быть заполнено');
         }
 
         $this->resourceName = $name;
+
         return $this;
     }
 
@@ -43,6 +44,7 @@ class ResourceDataFilter implements ResourceDataFilterInterface
     public function setAccessibleFields(array $fieldNames): static
     {
         $this->accessibleFields = $fieldNames;
+
         return $this;
     }
 
@@ -53,6 +55,7 @@ class ResourceDataFilter implements ResourceDataFilterInterface
     public function setAccessibleFilters(array $filterNames): static
     {
         $this->accessibleFilters = $filterNames;
+
         return $this;
     }
 
@@ -83,8 +86,7 @@ class ResourceDataFilter implements ResourceDataFilterInterface
         $this->validateFilters($conditions);
 
         $query = $this->buildBaseQuery()
-            ->where($conditions)
-            ->limit(1);
+            ->where($conditions);
 
         $result = $this->connection->selectOne($query);
 
@@ -115,7 +117,7 @@ class ResourceDataFilter implements ResourceDataFilterInterface
     private function validateResource(): void
     {
         if (empty($this->resourceName) === true) {
-            throw new RuntimeException('Resource name is not set');
+            throw new RuntimeException('Ресурс не задан');
         }
     }
 
@@ -132,7 +134,7 @@ class ResourceDataFilter implements ResourceDataFilterInterface
         foreach (array_keys($conditions) as $field) {
             if (in_array($field, $this->accessibleFilters, true) === false) {
                 throw new InvalidArgumentException(
-                    sprintf('Filtering by field "%s" is not allowed', $field)
+                    sprintf('Фильтрация поля "%s" недопустима', $field)
                 );
             }
         }

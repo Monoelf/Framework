@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource\connection;
 
 use Monoelf\Framework\http\exceptions\HttpBadRequestException;
+use Monoelf\Framework\resource\exceptions\DuplicateEntryException;
 use Monoelf\Framework\resource\query\mySQL\MysqlQueryBuilderInterface;
 use Monoelf\Framework\resource\query\QueryBuilderInterface;
 use PDO;
@@ -127,7 +128,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
      * @param string $resource
      * @param array $data
      * @return int
-     * @throws HttpBadRequestException
+     * @throws DuplicateEntryException
      */
     public function insert(string $resource, array $data): int
     {

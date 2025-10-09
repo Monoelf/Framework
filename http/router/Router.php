@@ -277,11 +277,11 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
             $value = $queryParams[$name] ?? $param['default'];
 
             if ($value === null && $param['required'] === true) {
-                throw new InvalidArgumentException("Отсутствует обязательный параметр: {$name}");
+                throw new HttpBadRequestException("Отсутствует обязательный параметр: {$name}");
             }
 
             if ($value !== null) {
-                $value = $this->castParam($value, $param['type'], $name);
+                $value = $this->validateParams($value, $param['type'], $name);
             }
 
             $result[$name] = $value;
@@ -297,7 +297,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      * @return mixed
      * @throws HttpBadRequestException
      */
-    private function castParam(mixed $value, string $type, string $name): mixed
+    private function validateParams(mixed $value, string $type, string $name): mixed
     {
         try {
             $this->validator->validate($value, $type);

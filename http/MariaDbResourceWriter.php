@@ -4,21 +4,22 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http;
 
+use InvalidArgumentException;
+use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
+use Monoelf\Framework\resource\exceptions\DuplicateEntryException;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
-class MariaDbResourceWriter implements ResourceWriterInterface
+final class MariaDbResourceWriter implements ResourceWriterInterface
 {
-    private DataBaseConnectionInterface $connection;
     private string $resourceName = '';
 
     /**
      * @param DataBaseConnectionInterface $connection
      */
-    public function __construct(DataBaseConnectionInterface $connection)
-    {
-        $this->connection = $connection;
-    }
+    public function __construct(
+        private readonly DataBaseConnectionInterface $connection
+    ) {}
 
     /**
      * @param string $name
@@ -26,6 +27,10 @@ class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function setResourceName(string $name): static
     {
+        if (empty($name) === true) {
+            throw new InvalidArgumentException('Resource name cannot be empty');
+        }
+
         $this->resourceName = $name;
 
         return $this;
@@ -37,7 +42,11 @@ class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function create(array $values): int
     {
-        return $this->connection->insert($this->resourceName, $values);
+        try {
+            return $this->connection->insert($this->resourceName, $values);
+        } catch (DuplicateEntryException $e) {
+            throw new HttpBadRequestException($e->getMessage(), 0, $e);
+        }
     }
 
     /**

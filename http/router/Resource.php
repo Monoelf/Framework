@@ -15,9 +15,7 @@ class Resource
         private readonly string $name,
         private readonly string $controller,
         private array           $config = []
-    )
-    {
-    }
+    ) {}
 
     /**
      * @param HTTPRouterInterface $router
@@ -44,9 +42,7 @@ class Resource
             );
 
             if (empty($params['middleware']) === false) {
-                foreach ($params['middleware'] as $middleware) {
-                    $route->addMiddleware($middleware);
-                }
+                $this->addMiddlewaresToRoute($route, $params['middleware']);
             }
 
         }
@@ -111,5 +107,17 @@ class Resource
         }
 
         return $config;
+    }
+
+    /**
+     * @param Route $route
+     * @param array $middlewares
+     * @return void
+     */
+    private function addMiddlewaresToRoute(Route $route, array $middlewares): void
+    {
+        foreach ($middlewares as $middleware) {
+            $route->addMiddleware($middleware);
+        }
     }
 }
