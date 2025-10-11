@@ -11,10 +11,6 @@ final class IntegerValidator implements RuleValidatorInterface
 {
     public function validate(mixed $value, array $options = []): void
     {
-        if (empty($value) === true) {
-            return;
-        }
-
         if (filter_var($value, FILTER_VALIDATE_INT) === false) {
             throw new ValidationException("Значение должно быть числом");
         }
