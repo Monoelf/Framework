@@ -6,16 +6,17 @@ namespace Monoelf\Framework\resource\query\mySQL;
 
 use InvalidArgumentException;
 
-class MysqlQueryBuilder implements MysqlQueryBuilderInterface
+final class MysqlQueryBuilder implements MysqlQueryBuilderInterface
 {
-    private string $select = '';
-    private string $from = '';
-    private string $where = '';
+    private ?string $select = null;
+    private ?string $from = null;
+    private ?string $where = null;
     private array $joins = [];
-    private string $orderBy = '';
-    private string $limit = '';
-    private string $offset = '';
+    private ?string $orderBy = null;
+    private ?string $limit = null;
+    private ?string $offset = null;
     private array $bindings = [];
+
 
     /**
      * @param array|string ...$fields
@@ -78,12 +79,16 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
 
         $whereParts = [];
 
-        foreach ($condition as $key => $value) {
-            $param = 'where_' . count($this->bindings);
+        foreach ($condition as $value) {
+            if (is_array($value) === true && isset($value['field'], $value['operator'], $value['value']) === true) {
+                $param = 'where_' . count($this->bindings);
 
-            $whereParts[] = $this->escapeField($key) . " = :$param";
+                $field = $this->escapeField($value['field']);
 
-            $this->bindings[$param] = $value;
+                $whereParts[] = "{$field} {$value['operator']} :$param";
+
+                $this->bindings[$param] = $value['value'];
+            }
         }
 
         if (empty($whereParts) === false) {
@@ -238,14 +243,19 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
         $sqlParts = [
             $this->select,
             $this->from,
-            implode(' ', $this->joins),
+            empty($this->joins) ? null : implode(' ', $this->joins),
             $this->where,
             $this->orderBy,
             $this->limit,
-            $this->offset
+            $this->offset,
         ];
 
-        $sql = implode(' ', array_filter($sqlParts, fn($part) => empty($part) === false));
+        $sqlParts = array_filter(
+            $sqlParts,
+            static fn($part) => $part !== null && $part !== ''
+        );
+
+        $sql = implode(' ', $sqlParts);
 
         return new StatementParameters($sql, $this->bindings);
     }
@@ -280,11 +290,9 @@ class MysqlQueryBuilder implements MysqlQueryBuilderInterface
     {
         $statement = $this->getStatement();
 
-        $sql = $statement->getSql();
+        $sql = $statement->sql;
 
-        $bindings = $statement->getBindings();
-
-        foreach ($bindings as $param => $value) {
+        foreach ($statement->bindings as $param => $value) {
             $escapedValue = null;
 
             if (is_string($value) === true) {

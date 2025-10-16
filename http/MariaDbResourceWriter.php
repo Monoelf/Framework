@@ -19,7 +19,8 @@ final class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function __construct(
         private readonly DataBaseConnectionInterface $connection
-    ) {}
+    ) {
+    }
 
     /**
      * @param string $name
@@ -27,10 +28,6 @@ final class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function setResourceName(string $name): static
     {
-        if (empty($name) === true) {
-            throw new InvalidArgumentException('Resource name cannot be empty');
-        }
-
         $this->resourceName = $name;
 
         return $this;
@@ -42,11 +39,7 @@ final class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function create(array $values): int
     {
-        try {
-            return $this->connection->insert($this->resourceName, $values);
-        } catch (DuplicateEntryException $e) {
-            throw new HttpBadRequestException($e->getMessage(), 0, $e);
-        }
+        return $this->connection->insert($this->resourceName, $values);
     }
 
     /**

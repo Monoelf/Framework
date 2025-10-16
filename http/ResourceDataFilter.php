@@ -19,133 +19,133 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
 
     public function __construct(
         private readonly DataBaseConnectionInterface $connection,
-        private readonly QueryBuilderInterface $queryBuilder
-    ) {}
+        private readonly QueryBuilderInterface       $queryBuilder
+    )
+    {
+    }
 
-    /**
-     * @param string $name
-     * @return $this
-     */
     public function setResourceName(string $name): static
     {
-        if (empty($name) === true) {
-            throw new InvalidArgumentException('Имя ресурса должно быть заполнено');
+        if ($name === '') {
+            throw new InvalidArgumentException('Имя ресурса должно быть указано');
         }
 
         $this->resourceName = $name;
-
         return $this;
     }
 
-    /**
-     * @param array $fieldNames
-     * @return $this
-     */
     public function setAccessibleFields(array $fieldNames): static
     {
         $this->accessibleFields = $fieldNames;
-
         return $this;
     }
 
-    /**
-     * @param array $filterNames
-     * @return $this
-     */
     public function setAccessibleFilters(array $filterNames): static
     {
         $this->accessibleFilters = $filterNames;
-
         return $this;
     }
 
-    /**
-     * @param array $condition
-     * @return array
-     */
-    public function filterAll(array $condition = []): array
+    public function filterAll(array $condition): array
     {
-        $this->validateResource();
-        $conditions = $this->mergeConditions($condition);
-        $this->validateFilters($conditions);
+        [$fields, $filters] = $this->extractConditionParts($condition);
+        $this->validateFilters(array_keys($filters));
 
-        $query = $this->buildBaseQuery()
-            ->where($conditions);
+        $query = $this->queryBuilder
+            ->select($this->resolveSelectFields($fields))
+            ->from($this->resourceName)
+            ->where($this->buildFilterConditions($filters));
 
         return $this->connection->select($query);
     }
 
-    /**
-     * @param array $condition
-     * @return array
-     */
-    public function filterOne(array $condition = []): array
+    public function filterOne(array $condition): array|null
     {
-        $this->validateResource();
-        $conditions = $this->mergeConditions($condition);
-        $this->validateFilters($conditions);
+        [$fields, $filters] = $this->extractConditionParts($condition);
+        $this->validateFilters(array_keys($filters));
 
-        $query = $this->buildBaseQuery()
-            ->where($conditions);
+        $query = $this->queryBuilder
+            ->select($this->resolveSelectFields($fields))
+            ->from($this->resourceName)
+            ->where($this->buildFilterConditions($filters));
 
-        $result = $this->connection->selectOne($query);
-
-        return $result ?? [];
+        return $this->connection->selectOne($query);
     }
 
-    /**
-     * @return QueryBuilderInterface
-     */
-    private function buildBaseQuery(): QueryBuilderInterface
+    private function extractConditionParts(array $condition): array
     {
-        return $this->queryBuilder
-            ->select($this->getSelectFields())
-            ->from($this->resourceName);
-    }
+        $fields = $condition['fields'] ?? [];
+        $filters = $condition['filter'] ?? [];
 
-    /**
-     * @return array|string[]
-     */
-    private function getSelectFields(): array
-    {
-        return empty($this->accessibleFields) ? ['*'] : $this->accessibleFields;
-    }
-
-    /**
-     * @return void
-     */
-    private function validateResource(): void
-    {
-        if (empty($this->resourceName) === true) {
-            throw new RuntimeException('Ресурс не задан');
+        if (!is_array($fields) || !is_array($filters)) {
+            throw new InvalidArgumentException('Поля и фильтры должны быть массивами');
         }
+
+        return [$fields, array_merge($this->defaultConditions, $filters)];
     }
 
-    /**
-     * @param array $conditions
-     * @return void
-     */
-    private function validateFilters(array $conditions): void
+    private function buildFilterConditions(array $filters): array
     {
-        if (empty($this->accessibleFilters) === true) {
+        $conditions = [];
+
+        foreach ($filters as $field => $operators) {
+            if (is_array($operators) === false) {
+                $conditions[$field] = $operators;
+                continue;
+            }
+
+            foreach ($operators as $operator => $value) {
+                $this->appendOperatorCondition($conditions, $field, $operator, $value);
+            }
+        }
+
+        return $conditions;
+    }
+
+    private function appendOperatorCondition(array &$conditions, string $field, string $operator, mixed $value): void
+    {
+        $conditions[] = [
+            'field' => $field,
+            'operator' => match ($operator) {
+                '$eq' => '=',
+                '$ne' => '!=',
+                '$gt' => '>',
+                '$lt' => '<',
+                '$gte' => '>=',
+                '$lte' => '<=',
+                '$like' => 'LIKE',
+                '$in' => 'IN',
+                default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
+            },
+            'value' => $value
+        ];
+    }
+
+    private function resolveSelectFields(array $fields): array
+    {
+        if (empty($fields)) {
+            return $this->accessibleFields ?: ['*'];
+        }
+
+        foreach ($fields as $field) {
+            if (!in_array($field, $this->accessibleFields, true)) {
+                throw new InvalidArgumentException("Доступ к полю '{$field}' запрещён");
+            }
+        }
+
+        return $fields;
+    }
+
+    private function validateFilters(array $fields): void
+    {
+        if (empty($this->accessibleFilters)) {
             return;
         }
 
-        foreach (array_keys($conditions) as $field) {
-            if (in_array($field, $this->accessibleFilters, true) === false) {
-                throw new InvalidArgumentException(
-                    sprintf('Фильтрация поля "%s" недопустима', $field)
-                );
+        foreach ($fields as $field) {
+            if (!in_array($field, $this->accessibleFilters, true)) {
+                throw new InvalidArgumentException("Фильтрация по полю '{$field}' недопустима");
             }
         }
-    }
-
-    /**
-     * @param array $conditions
-     * @return array
-     */
-    private function mergeConditions(array $conditions): array
-    {
-        return array_merge($this->defaultConditions, $conditions);
     }
 }

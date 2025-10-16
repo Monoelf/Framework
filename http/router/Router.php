@@ -9,6 +9,7 @@ use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use InvalidArgumentException;
 use Monoelf\Framework\http\ServerResponseInterface;
+use Monoelf\Framework\validator\ValidationException;
 use Monoelf\Framework\validator\Validator;
 use Psr\Http\Message\ServerRequestInterface;
 use Throwable;
@@ -301,8 +302,9 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
     {
         try {
             $this->validator->validate($value, $type);
+
             return $value;
-        } catch (Throwable $e) {
+        } catch (ValidationException $e) {
             throw new HttpBadRequestException(
                 "Ошибка валидации параметра '{$name}': " . $e->getMessage()
             );
