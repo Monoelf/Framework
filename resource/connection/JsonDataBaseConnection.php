@@ -10,6 +10,7 @@ use Monoelf\Framework\resource\exceptions\FileNotExistsException;
 use Monoelf\Framework\resource\exceptions\InvalidQueryException;
 use Monoelf\Framework\resource\query\file\FileQueryBuilderInterface;
 use Monoelf\Framework\resource\query\file\StatementParameters;
+use Monoelf\Framework\resource\query\OperatorsEnum;
 use Monoelf\Framework\resource\query\QueryBuilderInterface;
 
 final class JsonDataBaseConnection implements DataBaseConnectionInterface
@@ -23,15 +24,15 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     ) {
         $this->aliasManager->addAlias('@file-resources', $resourcesPath);
         $this->operators = [
-            '$eq' => fn (mixed $item, mixed $compare): bool => $item === $compare,
-            '$ne' => fn (mixed $item, mixed $compare): bool => $item !== $compare,
-            '$gt' => fn (mixed $item, mixed $compare): bool => $item > $compare,
-            '$gte' => fn (mixed $item, mixed $compare): bool => $item >= $compare,
-            '$lt' => fn (mixed $item, mixed $compare): bool => $item < $compare,
-            '$lte' => fn (mixed $item, mixed $compare): bool => $item <= $compare,
-            '$in' => fn (mixed $item, mixed $compare): bool => is_array($compare) === true && in_array($item, $compare, true) === true,
-            '$nin' => fn (mixed $item, mixed $compare): bool => is_array($compare) === true && in_array($item, $compare, true) === false,
-            '$like' => fn (string $item, string $compare): bool => str_contains($item, $compare) === true,
+            OperatorsEnum::EQ->value => fn (mixed $item, mixed $compare): bool => $item === $compare,
+            OperatorsEnum::NE->value => fn (mixed $item, mixed $compare): bool => $item !== $compare,
+            OperatorsEnum::GT->value => fn (mixed $item, mixed $compare): bool => $item > $compare,
+            OperatorsEnum::GTE->value => fn (mixed $item, mixed $compare): bool => $item >= $compare,
+            OperatorsEnum::LT->value => fn (mixed $item, mixed $compare): bool => $item < $compare,
+            OperatorsEnum::LTE->value => fn (mixed $item, mixed $compare): bool => $item <= $compare,
+            OperatorsEnum::IN->value => fn (mixed $item, array $compare): bool => in_array($item, $compare, true) === true,
+            OperatorsEnum::NIN->value => fn (mixed $item, array $compare): bool => in_array($item, $compare, true) === false,
+            OperatorsEnum::LIKE->value => fn (string $item, string $compare): bool => str_contains($item, $compare) === true,
         ];
     }
 
@@ -46,10 +47,6 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
         $data = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
-        if (is_array($data) === false) {
-            return [];
-        }
-
         return $this->applyQueryParameters($data, $statement);
     }
 
@@ -59,9 +56,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
      */
     public function selectOne(QueryBuilderInterface $query): null|array
     {
-        $result = $this->select($query);
-
-        return $result[0] ?? null;
+        return $this->select($query)[0] ?? null;
     }
 
     /**
@@ -90,11 +85,11 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     {
         $result = $this->selectOne($query);
 
-        if (is_array($result) === true) {
-            return array_values($result)[0] ?? null;
+        if ($result === null) {
+            return null;
         }
 
-        return null;
+        return array_values($result)[0] ?? null;
     }
 
     /**
@@ -106,10 +101,6 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
         $filepath = $this->getFilepath($resource);
 
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
-
-        if (is_array($existingData) === false) {
-            return 0;
-        }
 
         $updatedCount = 0;
 
@@ -136,18 +127,14 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
-        if (is_array($existingData) === false) {
-            $existingData = [];
-        }
-
         $data['id'] = isset($data['id']) === true
-            ? $data['id']
+            ? (int) $data['id']
             : ($this->loadLastInsertedId($resource) + 1);
         $existingData[] = $data;
 
         file_put_contents($filepath, json_encode($existingData));
 
-        $this->saveLastInsertedId($resource, (int)$data['id']);
+        $this->saveLastInsertedId($resource, $data['id']);
 
         return 1;
     }
@@ -161,10 +148,6 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
         $filepath = $this->getFilepath($resource);
 
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
-
-        if (is_array($existingData) === false) {
-            return 0;
-        }
 
         $filteredData = array_filter($existingData, fn ($item) => $this->matchCondition($item, $condition) === false);
         $deletedCount = count($existingData) - count($filteredData);
@@ -199,8 +182,10 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
         }
 
         if (empty($statement->selectFields) === false) {
+            $flippedSelectFields = array_flip($statement->selectFields);
+
             $data = array_map(
-                fn ($item) => array_intersect_key($item, array_flip($statement->selectFields)),
+                fn (array $item): array => array_intersect_key($item, $flippedSelectFields),
                 $data
             );
         }
@@ -247,10 +232,9 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
     private function sortData(array $data, array $orderBy): array
     {
-        usort($data, function (mixed $firstItem, mixed $secondItem) use ($orderBy): int {
+        usort($data, function (array $firstItem, array $secondItem) use ($orderBy): int {
             foreach ($orderBy as $field => $direction) {
-
-                if (($firstItem[$field] ?? null) == ($secondItem[$field] ?? null)) {
+                if (($firstItem[$field] ?? null) === ($secondItem[$field] ?? null)) {
                     continue;
                 }
 

@@ -11,7 +11,7 @@ final class FileResourceWriter implements ResourceWriterInterface
 {
     private ?string $resourceName = null;
 
-    private ?array $fieldNames = null;
+    private ?array $accessibleField = null;
 
     public function __construct(
         private readonly DataBaseConnectionInterface $databaseConnection,
@@ -35,11 +35,11 @@ final class FileResourceWriter implements ResourceWriterInterface
     {
         $this->validateSelfState();
 
-        if ($this->fieldNames !== null) {
+        if ($this->accessibleField !== null) {
             $this->validateFieldsAccessible(array_keys($values));
 
-            foreach ($this->fieldNames as $fieldName) {
-                $values[$fieldName] = isset($values[$fieldName]) === true ?? null;
+            foreach ($this->accessibleField as $fieldName) {
+                $values[$fieldName] = $values[$fieldName] ?? null;
             }
         }
 
@@ -55,7 +55,7 @@ final class FileResourceWriter implements ResourceWriterInterface
     {
         $this->validateSelfState();
 
-        if ($this->fieldNames !== null) {
+        if ($this->accessibleField !== null) {
             $this->validateFieldsAccessible(array_keys($values));
         }
 
@@ -85,7 +85,7 @@ final class FileResourceWriter implements ResourceWriterInterface
 
     public function setAccessibleFields(array $fieldNames): static
     {
-        $this->fieldNames = $fieldNames;
+        $this->accessibleField = $fieldNames;
 
         return $this;
     }
@@ -93,7 +93,7 @@ final class FileResourceWriter implements ResourceWriterInterface
     private function validateFieldsAccessible(array $fieldNames): void
     {
         foreach ($fieldNames as $fieldName) {
-            if (in_array($fieldName, $this->fieldNames, true) === false) {
+            if (in_array($fieldName, $this->accessibleField, true) === false) {
                 throw new \InvalidArgumentException("Поле '{$fieldName}' недоступно для записи");
             }
         }

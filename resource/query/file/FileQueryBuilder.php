@@ -7,6 +7,7 @@ namespace Monoelf\Framework\resource\query\file;
 use BadMethodCallException;
 use InvalidArgumentException;
 use Monoelf\Framework\resource\query\file\FileQueryBuilderInterface;
+use Monoelf\Framework\resource\query\OperatorsEnum;
 
 final class FileQueryBuilder implements FileQueryBuilderInterface
 {
@@ -42,7 +43,7 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
             throw new InvalidArgumentException('Ресурс должен быть строкой');
         }
 
-        $this->resource = is_string($resource) === true ? $resource : $resource[0];
+        $this->resource = $resource;
 
         return $this;
     }
@@ -50,7 +51,9 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
     public function where(array $condition): static
     {
         foreach ($condition as $field => $filterValue) {
-            $filterValue = is_array($filterValue) === false ? ['$eq' => $filterValue] : $filterValue;
+            $filterValue = is_array($filterValue) === false
+                ? [OperatorsEnum::EQ->value => $filterValue]
+                : $filterValue;
             $this->whereClause[$field] = array_merge($this->whereClause[$field] ?? [], $filterValue);
         }
 
@@ -59,14 +62,14 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
 
     public function whereIn(string $column, array $values): static
     {
-        $this->whereClause[$column]['$in'] = $values;
+        $this->whereClause[$column][OperatorsEnum::IN->value] = $values;
 
         return $this;
     }
 
     public function join(string $type, array|string $resource, string $on): static
     {
-      throw new BadMethodCallException('Join не реализуется для файлов');
+        throw new BadMethodCallException('Join не реализуется для файлов');
     }
 
     public function orderBy(array $columns): static

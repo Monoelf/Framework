@@ -77,23 +77,29 @@ final class FileResourceDataFilter implements ResourceDataFilterInterface
 
     private function checkConditionOnAccessible(array $condition): void
     {
-        if (isset($condition['fields']) === false) {
-            $condition['fields'] = $this->accessibleFields;
+        if (isset($condition['fields']) === true) {
+            $this->checkFieldsOnAccessible($condition['fields']);
         }
 
-        foreach ($condition['fields'] as $field) {
+        if (isset($condition['filter']) === true) {
+            $this->checkFiltersOnAccessible(array_keys($condition['filter']));
+        }
+    }
+
+    private function checkFieldsOnAccessible(array $fields): void
+    {
+        foreach ($fields as $field) {
             if (in_array($field, $this->accessibleFields, true) === false) {
                 throw new \InvalidArgumentException("Поле '{$field}' недоступно для выборки");
             }
         }
+    }
 
-        if (isset($condition['filter']) === false) {
-            return;
-        }
-
-        foreach ($condition['filter'] as $field => $filter) {
+    private function checkFiltersOnAccessible(array $fields): void
+    {
+        foreach ($fields as $field) {
             if (in_array($field, $this->accessibleFilters, true) === false) {
-                throw new \InvalidArgumentException("Фильтр по полю '{$field}' недоступен");
+                throw new \InvalidArgumentException("Поле '{$field}' недоступно для фильтрации");
             }
         }
     }
@@ -103,10 +109,7 @@ final class FileResourceDataFilter implements ResourceDataFilterInterface
         $builder = $this->container->get(FileQueryBuilderInterface::class);
 
         $builder->from($this->resourceName);
-
-        if (empty($condition['fields']) === false) {
-            $builder->select($condition['fields']);
-        }
+        $builder->select(empty($condition['fields']) === true ? $this->accessibleFields : $condition['fields']);
 
         if (empty($condition['filter']) === false) {
             $builder->where($condition['filter']);
