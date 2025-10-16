@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\dto;
 
-use Monoelf\Framework\http\dto\ResponseDto;
+use Monoelf\Framework\http\dto\BaseControllerResponse;
 
-class JsonResponse extends ResponseDto
+class JsonResponse extends BaseControllerResponse
 {
     public function __construct(mixed $data = null, int $status = 200)
     {
