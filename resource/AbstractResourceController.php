@@ -14,6 +14,7 @@ use Monoelf\Framework\http\exceptions\HttpForbiddenException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use Monoelf\Framework\resource\form_request\FormRequest;
 use Monoelf\Framework\resource\form_request\FormRequestFactoryInterface;
+use Monoelf\Framework\resource\form_request\FormRequestInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 abstract class AbstractResourceController
@@ -37,7 +38,7 @@ abstract class AbstractResourceController
     protected function getForms(): array
     {
         return [
-            ResourceActionTypesEnum::CREATE->value => [FormRequest::class, $this->getFieldRules()],
+            ResourceActionTypesEnum::CREATE->value => FormRequest::class,
             ResourceActionTypesEnum::UPDATE->value => [FormRequest::class, $this->getFieldRules()],
             ResourceActionTypesEnum::PATCH->value => [FormRequest::class, $this->getFieldRules()],
         ];
@@ -55,7 +56,10 @@ abstract class AbstractResourceController
         ];
     }
 
-    abstract protected function getFieldRules(): array;
+    protected function getFieldRules(): array
+    {
+        return [];
+    }
 
     abstract protected function getResourceName(): string;
 
@@ -144,12 +148,12 @@ abstract class AbstractResourceController
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::CREATE);
 
-        $form = $this->formRequestFactory->create(...$this->getForms()[ResourceActionTypesEnum::CREATE->value]);
+        $form = $this->buildForm(ResourceActionTypesEnum::CREATE->value);
 
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors(), JSON_UNESCAPED_UNICODE));
+            throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
         $this->resourceWriter->create($form->getValues());
@@ -161,12 +165,12 @@ abstract class AbstractResourceController
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::UPDATE);
 
-        $form = $this->formRequestFactory->create(...$this->getForms()[ResourceActionTypesEnum::UPDATE->value]);
+        $form = $this->buildForm(ResourceActionTypesEnum::UPDATE->value);
 
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors(), JSON_UNESCAPED_UNICODE));
+            throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
         $rowsCount = $this->resourceWriter->update($id, $form->getValues());
@@ -182,14 +186,14 @@ abstract class AbstractResourceController
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::PATCH);
 
-        $form = $this->formRequestFactory->create(...$this->getForms()[ResourceActionTypesEnum::PATCH->value]);
+        $form = $this->buildForm(ResourceActionTypesEnum::PATCH->value);
 
         $form->setSkipEmptyValues();
 
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors(), JSON_UNESCAPED_UNICODE));
+            throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
         $rowsCount = $this->resourceWriter->patch($id, $form->getValues());
@@ -212,5 +216,16 @@ abstract class AbstractResourceController
         }
 
         return new DeleteResponse();
+    }
+
+    private function buildForm(string $action): FormRequestInterface
+    {
+        $formParams = $this->getForms()[$action];
+
+        if (is_array($formParams) === true) {
+            return $this->formRequestFactory->create($formParams[0], $formParams[1]);
+        }
+
+        return $this->formRequestFactory->create($formParams);
     }
 }
