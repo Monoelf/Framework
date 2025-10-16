@@ -34,13 +34,10 @@ final class FileResourceWriter implements ResourceWriterInterface
     public function update(int|string $id, array $values): int
     {
         $this->validateSelfState();
+        $this->validateFieldsAccessible(array_keys($values));
 
-        if ($this->accessibleField !== null) {
-            $this->validateFieldsAccessible(array_keys($values));
-
-            foreach ($this->accessibleField as $fieldName) {
-                $values[$fieldName] = $values[$fieldName] ?? null;
-            }
+        foreach ($this->accessibleField as $fieldName) {
+            $values[$fieldName] = $values[$fieldName] ?? null;
         }
 
         return $this->databaseConnection->update(
@@ -54,10 +51,7 @@ final class FileResourceWriter implements ResourceWriterInterface
     public function patch(int|string $id, array $values): int
     {
         $this->validateSelfState();
-
-        if ($this->accessibleField !== null) {
-            $this->validateFieldsAccessible(array_keys($values));
-        }
+        $this->validateFieldsAccessible(array_keys($values));
 
         return $this->databaseConnection->update(
             $this->resourceName,
@@ -80,6 +74,10 @@ final class FileResourceWriter implements ResourceWriterInterface
     {
         if ($this->resourceName === null) {
             throw new \InvalidArgumentException('Ресурс не задан');
+        }
+
+        if ($this->accessibleField === null) {
+            throw new \InvalidArgumentException('Доступные поля не заданы');
         }
     }
 

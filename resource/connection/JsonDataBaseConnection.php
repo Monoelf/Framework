@@ -104,10 +104,9 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
         $updatedCount = 0;
 
-        foreach ($existingData as &$item) {
+        foreach ($existingData as $key => $item) {
             if ($this->matchCondition($item, $condition) === true) {
-                $item = array_merge($item, $data);
-
+                $existingData[$key] = array_merge($item, $data);
                 $updatedCount++;
             }
         }
@@ -120,21 +119,36 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     /**
      * @throws FileNotExistsException
      * @throws \JsonException
+     * @throws InvalidQueryException
      */
     public function insert(string $resource, array $data): int
     {
         $filepath = $this->getFilepath($resource);
-
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
-        $data['id'] = isset($data['id']) === true
-            ? (int) $data['id']
-            : ($this->loadLastInsertedId($resource) + 1);
+        $lastId = $this->loadLastId($resource);
+        $insertingId = isset($data['id']) === true
+            ? (int)$data['id']
+            : $lastId + 1;
+
+        if (in_array($insertingId, array_column($existingData, 'id'), true) === true) {
+            throw new InvalidQueryException("Запись с id = $insertingId уже существует в ресурсе '$resource'");
+        }
+
+        $data['id'] = $insertingId;
         $existingData[] = $data;
 
-        file_put_contents($filepath, json_encode($existingData));
+        if (file_put_contents($filepath, json_encode($existingData, JSON_THROW_ON_ERROR)) === false) {
+            $message = error_get_last()['message'] ?? 'Не удалось записать файл';
 
-        $this->saveLastInsertedId($resource, $data['id']);
+            throw new \RuntimeException("Ошибка записи в файл '$filepath': $message");
+        }
+
+        if ($insertingId > $lastId) {
+            $this->saveLastId($resource, $insertingId);
+        }
+
+        $this->lastInsertId = (string)$insertingId;
 
         return 1;
     }
@@ -149,7 +163,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
-        $filteredData = array_filter($existingData, fn ($item) => $this->matchCondition($item, $condition) === false);
+        $filteredData = array_filter($existingData, fn (array $item): bool => $this->matchCondition($item, $condition) === false);
         $deletedCount = count($existingData) - count($filteredData);
 
         file_put_contents($filepath, json_encode(array_values($filteredData)));
@@ -159,7 +173,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
     public function getLastInsertId(): string
     {
-        return $this->lastInsertId;
+        return $this->lastInsertId ?? '';
     }
 
     private function getStatement(FileQueryBuilderInterface $queryBuilder): StatementParameters
@@ -192,14 +206,6 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
         return array_values($data);
     }
-
-    /*
-     * [
-     *  'field1' => [
-     *      '$in' => [...]
-     * ],
-     * 'field2' => 123
-     */
 
     private function matchCondition(array $item, array $condition): bool
     {
@@ -266,7 +272,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     /**
      * @throws \JsonException
      */
-    private function saveLastInsertedId(string $resource, int $id): void
+    private function saveLastId(string $resource, int $id): void
     {
         $filepathMeta = $this->aliasManager->buildPath('@file-resources/_meta.json');
 
@@ -286,19 +292,17 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
 
         file_put_contents($filepathMeta, json_encode($existingData, JSON_UNESCAPED_UNICODE));
         chmod($filepathMeta, 0644);
-
-        $this->lastInsertId = (string)$id;
     }
 
     /**
      * @throws \JsonException
      */
-    private function loadLastInsertedId(string $resource): int
+    private function loadLastId(string $resource): int
     {
         $filepathMeta = $this->aliasManager->buildPath('@file-resources/_meta.json');
 
         if (file_exists($filepathMeta) === false) {
-            $this->saveLastInsertedId($resource, 0);
+            $this->saveLastId($resource, 0);
         }
 
         $existingData = json_decode(file_get_contents($filepathMeta), true, flags: JSON_THROW_ON_ERROR);
