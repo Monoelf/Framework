@@ -6,30 +6,43 @@ namespace Monoelf\Framework\resource\connection;
 
 use Monoelf\Framework\common\AliasManager;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
+use Monoelf\Framework\resource\exceptions\FileNotExistsException;
 use Monoelf\Framework\resource\exceptions\InvalidQueryException;
 use Monoelf\Framework\resource\query\file\FileQueryBuilderInterface;
 use Monoelf\Framework\resource\query\file\StatementParameters;
 use Monoelf\Framework\resource\query\QueryBuilderInterface;
 
-final class FileDataBaseConnection implements DataBaseConnectionInterface
+final class JsonDataBaseConnection implements DataBaseConnectionInterface
 {
     private ?string $lastInsertId = null;
+    private array $operators;
 
     public function __construct(
         private readonly AliasManager $aliasManager,
-        string $resourcesPath = '@app/runtime/file-resources'
+        string $resourcesPath = '@app/runtime',
     ) {
         $this->aliasManager->addAlias('@file-resources', $resourcesPath);
+        $this->operators = [
+            '$eq' => fn (mixed $item, mixed $compare): bool => $item === $compare,
+            '$ne' => fn (mixed $item, mixed $compare): bool => $item !== $compare,
+            '$gt' => fn (mixed $item, mixed $compare): bool => $item > $compare,
+            '$gte' => fn (mixed $item, mixed $compare): bool => $item >= $compare,
+            '$lt' => fn (mixed $item, mixed $compare): bool => $item < $compare,
+            '$lte' => fn (mixed $item, mixed $compare): bool => $item <= $compare,
+            '$in' => fn (mixed $item, mixed $compare): bool => is_array($compare) === true && in_array($item, $compare, true) === true,
+            '$nin' => fn (mixed $item, mixed $compare): bool => is_array($compare) === true && in_array($item, $compare, true) === false,
+            '$like' => fn (string $item, string $compare): bool => str_contains($item, $compare) === true,
+        ];
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
     public function select(QueryBuilderInterface $query): array
     {
         $statement = $this->getStatement($query);
         $filepath = $this->getFilepath($statement->resource);
-
-        if (file_exists($filepath) === false) {
-            return [];
-        }
 
         $data = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
@@ -40,6 +53,10 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return $this->applyQueryParameters($data, $statement);
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
     public function selectOne(QueryBuilderInterface $query): null|array
     {
         $result = $this->select($query);
@@ -47,6 +64,11 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return $result[0] ?? null;
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws InvalidQueryException
+     * @throws \JsonException
+     */
     public function selectColumn(QueryBuilderInterface $query): array
     {
         $statement = $this->getStatement($query);
@@ -60,6 +82,10 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return array_map(fn ($item) => $item[$statement->selectFields[0]] ?? null, $result);
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
     public function selectScalar(QueryBuilderInterface $query): mixed
     {
         $result = $this->selectOne($query);
@@ -71,13 +97,13 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return null;
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
     public function update(string $resource, array $data, array $condition): int
     {
         $filepath = $this->getFilepath($resource);
-
-        if (file_exists($filepath) === false) {
-            return 0;
-        }
 
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
@@ -100,34 +126,39 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return $updatedCount;
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
     public function insert(string $resource, array $data): int
     {
         $filepath = $this->getFilepath($resource);
 
-        $existingData = file_exists($filepath) === true
-            ? json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR)
-            : [];
+        $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
         if (is_array($existingData) === false) {
             $existingData = [];
         }
 
+        $data['id'] = isset($data['id']) === true
+            ? $data['id']
+            : ($this->loadLastInsertedId($resource) + 1);
         $existingData[] = $data;
-
-        $this->lastInsertId = (string)(count($existingData) - 1);
 
         file_put_contents($filepath, json_encode($existingData));
 
-        return count($existingData) - 1;
+        $this->saveLastInsertedId($resource, (int)$data['id']);
+
+        return 1;
     }
 
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
     public function delete(string $resource, array $condition): int
     {
         $filepath = $this->getFilepath($resource);
-
-        if (file_exists($filepath) === false) {
-            return 0;
-        }
 
         $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
 
@@ -177,32 +208,55 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return array_values($data);
     }
 
+    /*
+     * [
+     *  'field1' => [
+     *      '$in' => [...]
+     * ],
+     * 'field2' => 123
+     */
+
     private function matchCondition(array $item, array $condition): bool
     {
-        foreach ($condition as $field => $value) {
-            if (is_array($value) === false) {
-                if (!in_array($item[$field] ?? null, $value, true)) {
-                    return false;
-                }
-            } elseif (($item[$field] ?? null) != $value) {
+        foreach ($condition as $field => $filterValue) {
+            $itemValue = $item[$field] ?? null;
+
+            if ($this->matchArrayCondition($filterValue, $itemValue) === false) {
+                return false;
+            }
+
+        }
+
+        return true;
+    }
+
+    private function matchArrayCondition(array $fieldFilters, mixed $itemValue): bool
+    {
+        foreach ($fieldFilters as $op => $value) {
+            if (isset($this->operators[$op]) === false) {
+                throw new \InvalidArgumentException("Оператор {$op} не поддерживается");
+            }
+
+            if ($this->operators[$op]($itemValue, $value) === false) {
                 return false;
             }
         }
+
         return true;
     }
 
     private function sortData(array $data, array $orderBy): array
     {
-        usort($data, function ($a, $b) use ($orderBy) {
+        usort($data, function (mixed $firstItem, mixed $secondItem) use ($orderBy): int {
             foreach ($orderBy as $field => $direction) {
 
-                if (($a[$field] ?? null) == ($b[$field] ?? null)) {
+                if (($firstItem[$field] ?? null) == ($secondItem[$field] ?? null)) {
                     continue;
                 }
 
                 $sortOrder = strtolower($direction) === 'desc' ? 1 : -1;
 
-                return ($a[$field] ?? null) < ($b[$field] ?? null) ? $sortOrder : -$sortOrder;
+                return ($firstItem[$field] ?? null) < ($secondItem[$field] ?? null) ? $sortOrder : -$sortOrder;
             }
 
             return 0;
@@ -211,8 +265,60 @@ final class FileDataBaseConnection implements DataBaseConnectionInterface
         return $data;
     }
 
+    /**
+     * @throws FileNotExistsException
+     */
     private function getFilepath(string $resource): string
     {
-        return $this->aliasManager->buildPath('@file-resources/' . $resource . '.json');
+        $filepath = $this->aliasManager->buildPath('@file-resources/' . $resource . '.json');
+
+        if (file_exists($filepath) === false) {
+            throw new FileNotExistsException("Файл $filepath не существует");
+        }
+
+        return $filepath;
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private function saveLastInsertedId(string $resource, int $id): void
+    {
+        $filepathMeta = $this->aliasManager->buildPath('@file-resources/_meta.json');
+
+        if (file_exists($filepathMeta) === false) {
+            $dir = dirname($filepathMeta);
+
+            if (is_dir($dir) === false) {
+                mkdir($dir, 0755, true);
+            }
+
+            file_put_contents($filepathMeta, json_encode([], JSON_UNESCAPED_UNICODE));
+            chmod($filepathMeta, 0644);
+        }
+
+        $existingData = json_decode(file_get_contents($filepathMeta), true, flags: JSON_THROW_ON_ERROR);
+        $existingData[$resource] = $id;
+
+        file_put_contents($filepathMeta, json_encode($existingData, JSON_UNESCAPED_UNICODE));
+        chmod($filepathMeta, 0644);
+
+        $this->lastInsertId = (string)$id;
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private function loadLastInsertedId(string $resource): int
+    {
+        $filepathMeta = $this->aliasManager->buildPath('@file-resources/_meta.json');
+
+        if (file_exists($filepathMeta) === false) {
+            $this->saveLastInsertedId($resource, 0);
+        }
+
+        $existingData = json_decode(file_get_contents($filepathMeta), true, flags: JSON_THROW_ON_ERROR);
+
+        return $existingData[$resource] ?? 0;
     }
 }

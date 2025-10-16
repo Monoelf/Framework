@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource\query\file;
 
 use BadMethodCallException;
+use InvalidArgumentException;
 use Monoelf\Framework\resource\query\file\FileQueryBuilderInterface;
 
 final class FileQueryBuilder implements FileQueryBuilderInterface
@@ -37,7 +38,10 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
 
     public function from(array|string $resource): static
     {
-        // TODO: Уточнить, что значит массив $resource в контексте файлов
+        if (is_array($resource) === true) {
+            throw new InvalidArgumentException('Ресурс должен быть строкой');
+        }
+
         $this->resource = is_string($resource) === true ? $resource : $resource[0];
 
         return $this;
@@ -45,14 +49,17 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
 
     public function where(array $condition): static
     {
-        $this->whereClause = array_merge($this->whereClause, $condition);
+        foreach ($condition as $field => $filterValue) {
+            $filterValue = is_array($filterValue) === false ? ['$eq' => $filterValue] : $filterValue;
+            $this->whereClause[$field] = array_merge($this->whereClause[$field] ?? [], $filterValue);
+        }
 
         return $this;
     }
 
     public function whereIn(string $column, array $values): static
     {
-        $this->whereClause[$column] = $values;
+        $this->whereClause[$column]['$in'] = $values;
 
         return $this;
     }

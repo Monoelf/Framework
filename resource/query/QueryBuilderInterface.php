@@ -21,6 +21,4 @@ interface QueryBuilderInterface
     public function limit(int $limit): static;
 
     public function offset(int $offset): static;
-
-    //ToDO: общий интерфейс для Statement файлов и бд
 }
