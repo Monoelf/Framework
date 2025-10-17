@@ -47,6 +47,13 @@ final class Validator
         if (is_array($rule) === true) {
             $ruleName = $rule[0] ?? throw new ValidatorNotSupportedException('Правило валидации не указано');
             $options = array_slice($rule, 1, null, true);
+
+            if (
+                isset($options['skipOnEmpty']) === true
+                && is_null($value) === true
+            ) {
+                return;
+            }
         }
 
         if (isset($this->validators[$ruleName]) === false) {

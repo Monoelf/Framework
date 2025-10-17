@@ -12,10 +12,6 @@ final class StringValidator implements RuleValidatorInterface
 {
     public function validate(mixed $value, array $options = []): void
     {
-        if (empty($value) === true) {
-            return;
-        }
-
         if (is_string($value) === false) {
             throw new ValidationException('Значение должно быть строкой');
         }
