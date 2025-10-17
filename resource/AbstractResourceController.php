@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\resource;
 
+use InvalidArgumentException;
 use Monoelf\Framework\http\dto\CreateResponse;
 use Monoelf\Framework\http\dto\DeleteResponse;
 use Monoelf\Framework\http\dto\JsonResponse;
@@ -38,7 +39,7 @@ abstract class AbstractResourceController
     protected function getForms(): array
     {
         return [
-            ResourceActionTypesEnum::CREATE->value => FormRequest::class,
+            ResourceActionTypesEnum::CREATE->value => [FormRequest::class, $this->getFieldRules()],
             ResourceActionTypesEnum::UPDATE->value => [FormRequest::class, $this->getFieldRules()],
             ResourceActionTypesEnum::PATCH->value => [FormRequest::class, $this->getFieldRules()],
         ];
@@ -220,12 +221,16 @@ abstract class AbstractResourceController
 
     private function buildForm(string $action): FormRequestInterface
     {
-        $formParams = $this->getForms()[$action];
+        $formParams = $this->getForms()[$action] ?? null;
 
-        if (is_array($formParams) === true) {
+        if (is_array($formParams) === true && count($formParams) === 2) {
             return $this->formRequestFactory->create($formParams[0], $formParams[1]);
         }
 
-        return $this->formRequestFactory->create($formParams);
+        if (is_string($formParams) === true) {
+            return $this->formRequestFactory->create($formParams);
+        }
+
+        throw new InvalidArgumentException('Форма должна быть задана либо строкой имя класса либо массивом [имя класса, набор правил]');
     }
 }
