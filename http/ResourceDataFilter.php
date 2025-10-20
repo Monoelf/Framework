@@ -6,6 +6,7 @@ namespace Monoelf\Framework\http;
 
 use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
+use Monoelf\Framework\resource\query\OperatorsEnum;
 use Monoelf\Framework\resource\query\QueryBuilderInterface;
 use Monoelf\Framework\resource\ResourceDataFilterInterface;
 use RuntimeException;
@@ -20,10 +21,13 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
     public function __construct(
         private readonly DataBaseConnectionInterface $connection,
         private readonly QueryBuilderInterface       $queryBuilder
-    )
-    {
+    ) {
     }
 
+    /**
+     * @param string $name
+     * @return $this
+     */
     public function setResourceName(string $name): static
     {
         if ($name === '') {
@@ -31,21 +35,36 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
         }
 
         $this->resourceName = $name;
+
         return $this;
     }
 
+    /**
+     * @param array $fieldNames
+     * @return $this
+     */
     public function setAccessibleFields(array $fieldNames): static
     {
         $this->accessibleFields = $fieldNames;
+
         return $this;
     }
 
+    /**
+     * @param array $filterNames
+     * @return $this
+     */
     public function setAccessibleFilters(array $filterNames): static
     {
         $this->accessibleFilters = $filterNames;
+
         return $this;
     }
 
+    /**
+     * @param array $condition
+     * @return array
+     */
     public function filterAll(array $condition): array
     {
         [$fields, $filters] = $this->extractConditionParts($condition);
@@ -72,18 +91,26 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
         return $this->connection->selectOne($query);
     }
 
+    /**
+     * @param array $condition
+     * @return array
+     */
     private function extractConditionParts(array $condition): array
     {
         $fields = $condition['fields'] ?? [];
         $filters = $condition['filter'] ?? [];
 
-        if (!is_array($fields) || !is_array($filters)) {
+        if (is_array($fields) === false || is_array($filters) === false) {
             throw new InvalidArgumentException('Поля и фильтры должны быть массивами');
         }
 
         return [$fields, array_merge($this->defaultConditions, $filters)];
     }
 
+    /**
+     * @param array $filters
+     * @return array
+     */
     private function buildFilterConditions(array $filters): array
     {
         $conditions = [];
@@ -102,33 +129,45 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
         return $conditions;
     }
 
+    /**
+     * @param array $conditions
+     * @param string $field
+     * @param string $operator
+     * @param mixed $value
+     * @return void
+     */
     private function appendOperatorCondition(array &$conditions, string $field, string $operator, mixed $value): void
     {
         $conditions[] = [
             'field' => $field,
             'operator' => match ($operator) {
-                '$eq' => '=',
-                '$ne' => '!=',
-                '$gt' => '>',
-                '$lt' => '<',
-                '$gte' => '>=',
-                '$lte' => '<=',
-                '$like' => 'LIKE',
-                '$in' => 'IN',
+                OperatorsEnum::EQ->value => '=',
+                OperatorsEnum::NE->value => '!=',
+                OperatorsEnum::GT->value => '>',
+                OperatorsEnum::LT->value => '<',
+                OperatorsEnum::GTE->value => '>=',
+                OperatorsEnum::LTE->value => '<=',
+                OperatorsEnum::LIKE->value => 'LIKE',
+                OperatorsEnum::IN->value => 'IN',
+                OperatorsEnum::NIN->value => 'NOT IN',
                 default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
             },
             'value' => $value
         ];
     }
 
+    /**
+     * @param array $fields
+     * @return array|string[]
+     */
     private function resolveSelectFields(array $fields): array
     {
-        if (empty($fields)) {
+        if (empty($fields) === true) {
             return $this->accessibleFields ?: ['*'];
         }
 
         foreach ($fields as $field) {
-            if (!in_array($field, $this->accessibleFields, true)) {
+            if (in_array($field, $this->accessibleFields, true) === false) {
                 throw new InvalidArgumentException("Доступ к полю '{$field}' запрещён");
             }
         }
@@ -136,14 +175,18 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
         return $fields;
     }
 
+    /**
+     * @param array $fields
+     * @return void
+     */
     private function validateFilters(array $fields): void
     {
-        if (empty($this->accessibleFilters)) {
+        if (empty($this->accessibleFilters) === true) {
             return;
         }
 
         foreach ($fields as $field) {
-            if (!in_array($field, $this->accessibleFilters, true)) {
+            if (in_array($field, $this->accessibleFilters, true) === false) {
                 throw new InvalidArgumentException("Фильтрация по полю '{$field}' недопустима");
             }
         }

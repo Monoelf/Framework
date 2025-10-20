@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http;
 
-use InvalidArgumentException;
-use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
-use Monoelf\Framework\resource\exceptions\DuplicateEntryException;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
-final class MariaDbResourceWriter implements ResourceWriterInterface
+final class ResourceWriter implements ResourceWriterInterface
 {
     private string $resourceName = '';
+    private array $accessibleFields = [];
 
     /**
      * @param DataBaseConnectionInterface $connection
@@ -49,11 +47,9 @@ final class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function update(string|int $id, array $values): int
     {
-        return $this->connection->update(
-            $this->resourceName,
-            $values,
-            ['id' => $id]
-        );
+        $values = $this->prepareValues($values, fullReplace: true);
+
+        return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
     /**
@@ -63,7 +59,9 @@ final class MariaDbResourceWriter implements ResourceWriterInterface
      */
     public function patch(string|int $id, array $values): int
     {
-        return $this->update($id, $values);
+        $values = $this->prepareValues($values, fullReplace: false);
+
+        return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
     /**
@@ -76,5 +74,36 @@ final class MariaDbResourceWriter implements ResourceWriterInterface
             $this->resourceName,
             ['id' => $id]
         );
+    }
+
+    /**
+     * @param array $fieldNames
+     * @return $this
+     */
+    public function setAccessibleFields(array $fieldNames): static
+    {
+        $this->accessibleFields = $fieldNames;
+
+        return $this;
+    }
+
+    /**
+     * @param array $values
+     * @param bool $fullReplace
+     * @return array
+     */
+    private function prepareValues(array $values, bool $fullReplace): array
+    {
+        if ($fullReplace === false) {
+            return $values;
+        }
+
+        foreach ($this->accessibleFields as $field) {
+            if (array_key_exists($field, $values) === false) {
+                $values[$field] = null;
+            }
+        }
+
+        return $values;
     }
 }
