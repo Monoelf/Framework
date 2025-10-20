@@ -6,7 +6,7 @@ namespace Monoelf\Framework\resource\query\mySQL;
 
 use InvalidArgumentException;
 
-final class MysqlQueryBuilder implements MysqlQueryBuilderInterface
+final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 {
     private ?string $select = null;
     private ?string $from = null;
@@ -26,7 +26,7 @@ final class MysqlQueryBuilder implements MysqlQueryBuilderInterface
     {
         $fields = is_array($fields[0]) ? $fields[0] : $fields;
 
-        $escapedFields = array_map(function ($field) {
+        $escapedFields = array_map(function (string $field): string {
             if (stripos($field, ' AS ') !== false) {
                 list($original, $alias) = explode(' AS ', $field, 2);
 

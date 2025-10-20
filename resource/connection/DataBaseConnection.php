@@ -6,7 +6,7 @@ namespace Monoelf\Framework\resource\connection;
 
 use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\resource\exceptions\DuplicateEntryException;
-use Monoelf\Framework\resource\query\mySQL\MysqlQueryBuilderInterface;
+use Monoelf\Framework\resource\query\mySQL\DataBaseQueryBuilderInterface;
 use Monoelf\Framework\resource\query\QueryBuilderInterface;
 use PDO;
 use PDOException;
@@ -192,10 +192,10 @@ class DataBaseConnection implements DataBaseConnectionInterface
     }
 
     /**
-     * @param MysqlQueryBuilderInterface $query
+     * @param DataBaseQueryBuilderInterface $query
      * @return PDOStatement
      */
-    private function executeQuery(MysqlQueryBuilderInterface $query): PDOStatement
+    private function executeQuery(DataBaseQueryBuilderInterface $query): PDOStatement
     {
         $statementParams = $query->getStatement();
 

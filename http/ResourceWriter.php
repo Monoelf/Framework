@@ -17,8 +17,7 @@ final class ResourceWriter implements ResourceWriterInterface
      */
     public function __construct(
         private readonly DataBaseConnectionInterface $connection
-    ) {
-    }
+    ) {}
 
     /**
      * @param string $name

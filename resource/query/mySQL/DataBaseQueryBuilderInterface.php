@@ -6,7 +6,7 @@ namespace Monoelf\Framework\resource\query\mySQL;
 
 use Monoelf\Framework\resource\query\QueryBuilderInterface;
 
-interface MysqlQueryBuilderInterface extends QueryBuilderInterface
+interface DataBaseQueryBuilderInterface extends QueryBuilderInterface
 {
     public function getStatement(): StatementParameters;
 }

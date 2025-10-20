@@ -27,9 +27,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
     public function __construct(
         private readonly ContainerInterface $container,
         private readonly Validator $validator,
-    )
-    {
-    }
+    ) {}
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
@@ -344,7 +342,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
     {
         $regex = preg_replace_callback(
             '/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?}/',
-            function ($match) {
+            function (array $match): string {
                 $name = $match[2];
 
                 return "(?P<{$name}>[^/]+)";
