@@ -245,7 +245,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
         foreach ($matches as $match) {
             $params[] = [
                 'name' => $match[2],
-                'type' => $match[3] ?? 'string', // по умолчанию string
+                'type' => $match[3] ?? 'string',
                 'required' => $match[1] !== '?',
                 'default' => $match[4] ?? null,
             ];

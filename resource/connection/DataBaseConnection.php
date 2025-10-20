@@ -144,24 +144,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
 
         $statement = $this->connection->prepare($sql);
 
-        try {
-            $statement->execute($bindings);
-        } catch (PDOException $e) {
-            $errorInfo = $e->errorInfo;
-
-            if (isset($errorInfo[0], $errorInfo[1]) === true
-                && $errorInfo[0] === '23000'
-
-                && $errorInfo[1] === 1062
-            ) {
-                throw new HttpBadRequestException(
-                    'Duplicate entry for resource `' . $resource . '`',
-                    0,
-                    $e
-                );
-            }
-            throw $e;
-        }
+        $statement->execute($bindings);
 
         $this->lastInsertId = $this->connection->lastInsertId();
 
