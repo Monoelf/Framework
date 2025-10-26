@@ -26,6 +26,14 @@ final class ServerRequest extends Message implements ServerRequestInterface
     {
         $parsedBody = $_POST;
         $contentType = $_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? '';
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+
+        if (
+            in_array($method, ['PUT', 'PATCH'], true) === true
+            && stripos($contentType, 'application/x-www-form-urlencoded') !== false
+        ) {
+            parse_str(file_get_contents('php://input'), $parsedBody);
+        }
 
         if (stripos($contentType, 'application/json') !== false) {
             $decoded = json_decode(file_get_contents('php://input'), true);
@@ -35,7 +43,6 @@ final class ServerRequest extends Message implements ServerRequestInterface
             }
         }
 
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $uri = new Uri((string)($_SERVER['REQUEST_URI'] ?? '/'));
         $body = new Stream(fopen('php://input', 'rb'));
         $headers = [];
