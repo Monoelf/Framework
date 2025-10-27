@@ -16,7 +16,6 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
     private string $resourceName;
     private array $accessibleFields = [];
     private array $accessibleFilters = [];
-    private array $defaultConditions = [];
 
     public function __construct(
         private readonly DataBaseConnectionInterface $connection,
@@ -30,10 +29,6 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
      */
     public function setResourceName(string $name): static
     {
-        if ($name === '') {
-            throw new InvalidArgumentException('Имя ресурса должно быть указано');
-        }
-
         $this->resourceName = $name;
 
         return $this;
@@ -104,7 +99,7 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
             throw new InvalidArgumentException('Поля и фильтры должны быть массивами');
         }
 
-        return [$fields, array_merge($this->defaultConditions, $filters)];
+        return [$fields, $filters];
     }
 
     /**
@@ -122,7 +117,7 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
             }
 
             foreach ($operators as $operator => $value) {
-                $this->appendOperatorCondition($conditions, $field, $operator, $value);
+                $conditions = $this->appendOperatorCondition($conditions, $field, $operator, $value);
             }
         }
 
@@ -134,9 +129,9 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
      * @param string $field
      * @param string $operator
      * @param mixed $value
-     * @return void
+     * @return array
      */
-    private function appendOperatorCondition(array &$conditions, string $field, string $operator, mixed $value): void
+    private function appendOperatorCondition(array $conditions, string $field, string $operator, mixed $value): array
     {
         $conditions[] = [
             'field' => $field,
@@ -154,6 +149,8 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
             },
             'value' => $value
         ];
+
+        return $conditions;
     }
 
     /**
@@ -162,10 +159,6 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
      */
     private function resolveSelectFields(array $fields): array
     {
-        if (empty($fields) === true) {
-            return $this->accessibleFields ?: ['*'];
-        }
-
         foreach ($fields as $field) {
             if (in_array($field, $this->accessibleFields, true) === false) {
                 throw new InvalidArgumentException("Доступ к полю '{$field}' запрещён");
@@ -181,10 +174,6 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
      */
     private function validateFilters(array $fields): void
     {
-        if (empty($this->accessibleFilters) === true) {
-            return;
-        }
-
         foreach ($fields as $field) {
             if (in_array($field, $this->accessibleFilters, true) === false) {
                 throw new InvalidArgumentException("Фильтрация по полю '{$field}' недопустима");
