@@ -28,12 +28,12 @@ abstract class AbstractResourceController
     ) {
         $this->resourceDataFilter
             ->setResourceName($this->getResourceName())
-            ->setAccessibleFields($this->getAccessibleFilters())
-            ->setAccessibleFilters($this->getAccessibleFields());
+            ->setAccessibleFields($this->getAccessibleFields())
+            ->setAccessibleFilters($this->getAccessibleFilters());
 
         $this->resourceWriter
             ->setResourceName($this->getResourceName())
-            ->setAccessibleFields($this->getAccessibleFilters());
+            ->setAccessibleFields($this->getAccessibleFields());
     }
 
     protected function getForms(): array
@@ -113,6 +113,7 @@ abstract class AbstractResourceController
      * ]
      *
      * @return JsonResponse
+     * @throws HttpForbiddenException
      */
     public function actionList(): JsonResponse
     {
@@ -126,7 +127,7 @@ abstract class AbstractResourceController
     /**
      * Возврат ресурса, по ограничениям указанным в строке запроса
      * Пример запроса:
-     * ?fields[]=id&fields[]=name&filter[id][$eq]=1
+     * ?fields[]=id&fields[]=name
      * Пример ответа:
      * application/json
      * {
@@ -134,13 +135,18 @@ abstract class AbstractResourceController
      *     "name": "Некоторое имя 1"
      * },
      *
+     * @param int $id
      * @return JsonResponse
+     * @throws HttpForbiddenException
      */
-    public function actionView(): JsonResponse
+    public function actionView(int $id): JsonResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::VIEW);
 
-        $data = $this->resourceDataFilter->filterOne($this->request->getQueryParams());
+        $data = $this->resourceDataFilter->filterOne([
+            'fields' => $this->request->getQueryParams()['fields'] ?? [],
+            'filter' => ['id' => ['$eq' => $id]]
+        ]);
 
         return new JsonResponse($data);
     }
@@ -162,7 +168,7 @@ abstract class AbstractResourceController
         return new CreateResponse();
     }
 
-    public function actionUpdate(string|int $id): UpdateResponse
+    public function actionUpdate(int $id): UpdateResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::UPDATE);
 
@@ -183,7 +189,7 @@ abstract class AbstractResourceController
         return new UpdateResponse();
     }
 
-    public function actionPatch(string|int $id): PatchResponse
+    public function actionPatch(int $id): PatchResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::PATCH);
 
@@ -206,7 +212,7 @@ abstract class AbstractResourceController
         return new PatchResponse();
     }
 
-    public function actionDelete(string|int $id): DeleteResponse
+    public function actionDelete(int $id): DeleteResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::DELETE);
 
