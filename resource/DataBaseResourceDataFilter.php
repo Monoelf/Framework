@@ -6,12 +6,12 @@ namespace Monoelf\Framework\http;
 
 use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
+use Monoelf\Framework\resource\query\mySQL\DataBaseQueryBuilderInterface;
 use Monoelf\Framework\resource\query\OperatorsEnum;
-use Monoelf\Framework\resource\query\QueryBuilderInterface;
 use Monoelf\Framework\resource\ResourceDataFilterInterface;
 use RuntimeException;
 
-final class ResourceDataFilter implements ResourceDataFilterInterface
+final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
 {
     private string $resourceName;
     private array $accessibleFields = [];
@@ -19,9 +19,8 @@ final class ResourceDataFilter implements ResourceDataFilterInterface
 
     public function __construct(
         private readonly DataBaseConnectionInterface $connection,
-        private readonly QueryBuilderInterface       $queryBuilder
-    ) {
-    }
+        private readonly DataBaseQueryBuilderInterface       $queryBuilder
+    ) {}
 
     /**
      * @param string $name

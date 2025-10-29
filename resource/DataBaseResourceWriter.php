@@ -7,7 +7,7 @@ namespace Monoelf\Framework\http;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
-final class ResourceWriter implements ResourceWriterInterface
+final class DataBaseResourceWriter implements ResourceWriterInterface
 {
     private string $resourceName = '';
     private array $accessibleFields = [];
