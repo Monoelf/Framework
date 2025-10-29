@@ -17,19 +17,19 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
     private ?string $offset = null;
     private array $bindings = [];
 
-
     /**
-     * @param array|string ...$fields
+     * @param array|string $fields
      * @return $this
      */
-    public function select(array|string ...$fields): static
+    public function select(array|string $fields): static
     {
-        $fields = is_array($fields[0]) ? $fields[0] : $fields;
+        if (is_string($fields) === true) {
+            $fields = [$fields];
+        }
 
         $escapedFields = array_map(function (string $field): string {
             if (stripos($field, ' AS ') !== false) {
-                list($original, $alias) = explode(' AS ', $field, 2);
-
+                [$original, $alias] = explode(' AS ', $field, 2);
                 return $this->escapeField(trim($original)) . ' AS ' . $this->escapeField(trim($alias));
             }
 
@@ -40,6 +40,7 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 
         return $this;
     }
+
 
     /**
      * @param array|string $resource

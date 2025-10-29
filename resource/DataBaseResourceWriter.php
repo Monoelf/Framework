@@ -7,7 +7,7 @@ namespace Monoelf\Framework\http;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
-final class ResourceWriter implements ResourceWriterInterface
+final class DataBaseResourceWriter implements ResourceWriterInterface
 {
     private string $resourceName = '';
     private array $accessibleFields = [];
@@ -46,7 +46,7 @@ final class ResourceWriter implements ResourceWriterInterface
      */
     public function update(string|int $id, array $values): int
     {
-        $values = $this->prepareValues($values, fullReplace: true);
+        $values = $this->prepareValues($values);
 
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
@@ -58,8 +58,6 @@ final class ResourceWriter implements ResourceWriterInterface
      */
     public function patch(string|int $id, array $values): int
     {
-        $values = $this->prepareValues($values, fullReplace: false);
-
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
@@ -88,15 +86,10 @@ final class ResourceWriter implements ResourceWriterInterface
 
     /**
      * @param array $values
-     * @param bool $fullReplace
      * @return array
      */
-    private function prepareValues(array $values, bool $fullReplace): array
+    private function prepareValues(array $values): array
     {
-        if ($fullReplace === false) {
-            return $values;
-        }
-
         foreach ($this->accessibleFields as $field) {
             if (array_key_exists($field, $values) === false) {
                 $values[$field] = null;
