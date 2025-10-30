@@ -76,7 +76,7 @@ abstract class AbstractFormRequest implements FormRequestInterface
             }
 
             try {
-                $this->validator->validate($values[$attribute], $rule);
+                $this->validator->validate($values[$attribute] ?? null, $rule);
             } catch (ValidationException $e) {
                 $this->addError($attribute, $e->getMessage());
             }

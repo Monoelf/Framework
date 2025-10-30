@@ -113,7 +113,7 @@ abstract class AbstractResourceController
      * ]
      *
      * @return JsonResponse
-     * @throws HttpForbiddenException
+     * @throws HttpNotFoundException
      */
     public function actionList(): JsonResponse
     {
@@ -151,6 +151,10 @@ abstract class AbstractResourceController
         return new JsonResponse($data);
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpBadRequestException
+     */
     public function actionCreate(): CreateResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::CREATE);
@@ -160,10 +164,14 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException(json_encode($form->getErrors(), JSON_UNESCAPED_UNICODE));
         }
 
-        $this->resourceWriter->create($form->getValues());
+        try {
+            $this->resourceWriter->create($form->getValues());
+        } catch (InvalidArgumentException $exception) {
+            throw new HttpBadRequestException($exception->getMessage());
+        }
 
         return new CreateResponse();
     }

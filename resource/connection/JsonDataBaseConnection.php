@@ -24,14 +24,14 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     ) {
         $this->aliasManager->addAlias('@file-resources', $resourcesPath);
         $this->operators = [
-            OperatorsEnum::EQ->value => fn (mixed $item, mixed $compare): bool => $item === $compare,
-            OperatorsEnum::NE->value => fn (mixed $item, mixed $compare): bool => $item !== $compare,
-            OperatorsEnum::GT->value => fn (mixed $item, mixed $compare): bool => $item > $compare,
-            OperatorsEnum::GTE->value => fn (mixed $item, mixed $compare): bool => $item >= $compare,
-            OperatorsEnum::LT->value => fn (mixed $item, mixed $compare): bool => $item < $compare,
-            OperatorsEnum::LTE->value => fn (mixed $item, mixed $compare): bool => $item <= $compare,
-            OperatorsEnum::IN->value => fn (mixed $item, array $compare): bool => in_array($item, $compare, true) === true,
-            OperatorsEnum::NIN->value => fn (mixed $item, array $compare): bool => in_array($item, $compare, true) === false,
+            OperatorsEnum::EQ->value => fn (string $item, string $compare): bool => $item === $compare,
+            OperatorsEnum::NE->value => fn (string $item, string $compare): bool => $item !== $compare,
+            OperatorsEnum::GT->value => fn (string $item, string $compare): bool => $item > $compare,
+            OperatorsEnum::GTE->value => fn (string $item, string $compare): bool => $item >= $compare,
+            OperatorsEnum::LT->value => fn (string $item, string $compare): bool => $item < $compare,
+            OperatorsEnum::LTE->value => fn (string $item, string $compare): bool => $item <= $compare,
+            OperatorsEnum::IN->value => fn (string $item, array $compare): bool => in_array($item, $compare) === true,
+            OperatorsEnum::NIN->value => fn (string $item, array $compare): bool => in_array($item, $compare) === false,
             OperatorsEnum::LIKE->value => fn (string $item, string $compare): bool => str_contains($item, $compare) === true,
         ];
     }
@@ -45,7 +45,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
         $statement = $this->getStatement($query);
         $filepath = $this->getFilepath($statement->resource);
 
-        $data = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
+        $data = $this->readArrayFromJasonFile($filepath);
 
         return $this->applyQueryParameters($data, $statement);
     }
@@ -100,7 +100,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     {
         $filepath = $this->getFilepath($resource);
 
-        $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
+        $existingData = $this->readArrayFromJasonFile($filepath);
 
         $updatedCount = 0;
 
@@ -111,7 +111,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
             }
         }
 
-        file_put_contents($filepath, json_encode($existingData));
+        $this->writeArrayToJasonFile($filepath, $existingData);
 
         return $updatedCount;
     }
@@ -124,25 +124,27 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     public function insert(string $resource, array $data): int
     {
         $filepath = $this->getFilepath($resource);
-        $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
+        $existingData = $this->readArrayFromJasonFile($filepath);
 
         $lastId = $this->loadLastId($resource);
         $insertingId = isset($data['id']) === true
             ? (int)$data['id']
             : $lastId + 1;
 
-        if (in_array($insertingId, array_column($existingData, 'id'), true) === true) {
-            throw new InvalidQueryException("Запись с id = $insertingId уже существует в ресурсе '$resource'");
+        $allExistingIds = array_column($existingData, 'id');
+
+        if (in_array($insertingId, $allExistingIds, true) === true) {
+            if ($lastId + 1 !== $insertingId) {
+                throw new InvalidQueryException("Запись с id = $insertingId уже существует в ресурсе '$resource'");
+            }
+
+            $insertingId = max($allExistingIds) + 1;
         }
 
         $data['id'] = $insertingId;
         $existingData[] = $data;
 
-        if (file_put_contents($filepath, json_encode($existingData, JSON_THROW_ON_ERROR)) === false) {
-            $message = error_get_last()['message'] ?? 'Не удалось записать файл';
-
-            throw new \RuntimeException("Ошибка записи в файл '$filepath': $message");
-        }
+        $this->writeArrayToJasonFile($filepath, $existingData);
 
         if ($insertingId > $lastId) {
             $this->saveLastId($resource, $insertingId);
@@ -161,12 +163,12 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     {
         $filepath = $this->getFilepath($resource);
 
-        $existingData = json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
+        $existingData = $this->readArrayFromJasonFile($filepath);
 
         $filteredData = array_filter($existingData, fn (array $item): bool => $this->matchCondition($item, $condition) === false);
         $deletedCount = count($existingData) - count($filteredData);
 
-        file_put_contents($filepath, json_encode(array_values($filteredData)));
+        $this->writeArrayToJasonFile($filepath, array_values($filteredData));
 
         return $deletedCount;
     }
@@ -184,7 +186,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     private function applyQueryParameters(array $data, StatementParameters $statement): array
     {
         if (empty($statement->whereClause) === false) {
-            $data = array_filter($data, fn ($item) => $this->matchCondition($item, $statement->whereClause));
+            $data = array_filter($data, fn (array $item): bool => $this->matchCondition($item, $statement->whereClause));
         }
 
         if (empty($statement->orderByClause) === false) {
@@ -203,6 +205,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
                 $data
             );
         }
+
 
         return array_values($data);
     }
@@ -228,7 +231,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
                 throw new \InvalidArgumentException("Оператор {$op} не поддерживается");
             }
 
-            if ($this->operators[$op]($itemValue, $value) === false) {
+            if ($this->operators[$op]((string)$itemValue, (string)$value) === false) {
                 return false;
             }
         }
@@ -283,14 +286,14 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
                 mkdir($dir, 0755, true);
             }
 
-            file_put_contents($filepathMeta, json_encode([], JSON_UNESCAPED_UNICODE));
+            $this->writeArrayToJasonFile($filepathMeta, []);
             chmod($filepathMeta, 0644);
         }
 
-        $existingData = json_decode(file_get_contents($filepathMeta), true, flags: JSON_THROW_ON_ERROR);
+        $existingData = $this->readArrayFromJasonFile($filepathMeta);
         $existingData[$resource] = $id;
 
-        file_put_contents($filepathMeta, json_encode($existingData, JSON_UNESCAPED_UNICODE));
+        $this->writeArrayToJasonFile($filepathMeta, $existingData);
         chmod($filepathMeta, 0644);
     }
 
@@ -305,8 +308,23 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
             $this->saveLastId($resource, 0);
         }
 
-        $existingData = json_decode(file_get_contents($filepathMeta), true, flags: JSON_THROW_ON_ERROR);
+        return $this->readArrayFromJasonFile($filepathMeta)[$resource] ?? 0;
+    }
 
-        return $existingData[$resource] ?? 0;
+    private function writeArrayToJasonFile(string $filepath, array $data): void
+    {
+        if (file_put_contents($filepath, json_encode($data, JSON_THROW_ON_ERROR)) === false) {
+            $message = error_get_last()['message'] ?? 'Не удалось записать файл';
+
+            throw new \RuntimeException("Ошибка записи в файл '$filepath': $message");
+        }
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private function readArrayFromJasonFile(string $filepath): array
+    {
+        return json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
     }
 }

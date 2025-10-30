@@ -36,6 +36,10 @@ final class FileResourceWriter implements ResourceWriterInterface
         $this->validateSelfState();
         $this->validateFieldsAccessible(array_keys($values));
 
+        $values['id'] = isset($values['id']) === true
+            ? (int)$values['id']
+            : $id;
+
         foreach ($this->accessibleField as $fieldName) {
             $values[$fieldName] = $values[$fieldName] ?? null;
         }
@@ -43,7 +47,7 @@ final class FileResourceWriter implements ResourceWriterInterface
         return $this->databaseConnection->update(
             $this->resourceName,
             $values,
-            ['id' => $id]
+            ['id' => ['$eq' => $id]]
         );
 
     }
@@ -56,7 +60,7 @@ final class FileResourceWriter implements ResourceWriterInterface
         return $this->databaseConnection->update(
             $this->resourceName,
             $values,
-            ['id' => $id]
+            ['id' => ['$eq' => $id]]
         );
     }
 
@@ -66,7 +70,7 @@ final class FileResourceWriter implements ResourceWriterInterface
 
         return $this->databaseConnection->delete(
             $this->resourceName,
-            ['id' => $id]
+            ['id' => ['$eq' => $id]]
         );
     }
 

@@ -16,7 +16,7 @@ final class FileResourceDataFilter implements ResourceDataFilterInterface
 
     public function __construct(
         private readonly DataBaseConnectionInterface $databaseConnection,
-        private readonly ContainerInterface $container,
+        private readonly FileQueryBuilderInterface $queryBuilder,
     ) {}
 
 
@@ -41,22 +41,6 @@ final class FileResourceDataFilter implements ResourceDataFilterInterface
         return $this;
     }
 
-    /*
-     * Пример:
-     * @param array $condition
-     * [
-     *     "fields" => [
-     *         "id",
-     *         "order_id",
-     *         "name",
-     *     ],
-     *     "filter" => [
-     *         "order_id" => [
-     *             "$eq" => 3,
-     *         ],
-     *     ],
-     * ]
-     */
     public function filterAll(array $condition): array
     {
         $this->checkConditionOnAccessible($condition);
@@ -106,27 +90,13 @@ final class FileResourceDataFilter implements ResourceDataFilterInterface
 
     private function buildQuery(array $condition): FileQueryBuilderInterface
     {
-        $builder = $this->container->get(FileQueryBuilderInterface::class);
+        $this->queryBuilder->select(empty($condition['fields']) === true ? $this->accessibleFields : $condition['fields']);
+        $this->queryBuilder->from($this->resourceName);
+        $this->queryBuilder->where($condition['filter'] ?? []);
+        $this->queryBuilder->orderBy($condition['order'] ?? []);
+        $this->queryBuilder->limit(isset($condition['limit']) === true ? (int)$condition['limit'] : -1);
+        $this->queryBuilder->offset(isset($condition['offset']) === true ? (int)$condition['offset'] : -1);
 
-        $builder->from($this->resourceName);
-        $builder->select(empty($condition['fields']) === true ? $this->accessibleFields : $condition['fields']);
-
-        if (empty($condition['filter']) === false) {
-            $builder->where($condition['filter']);
-        }
-
-        if (empty($condition['order']) === false) {
-            $builder->orderBy($condition['order']);
-        }
-
-        if (isset($condition['limit']) === true) {
-            $builder->limit((int)$condition['limit']);
-        }
-
-        if (isset($condition['offset']) === true) {
-            $builder->offset((int)$condition['offset']);
-        }
-
-        return $builder;
+        return $this->queryBuilder;
     }
 }
