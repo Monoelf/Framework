@@ -89,14 +89,14 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
 
     public function limit(int $limit): static
     {
-        $this->limit = $limit;
+        $this->limit = $limit < 0 ? null : $limit;
 
         return $this;
     }
 
     public function offset(int $offset): static
     {
-        $this->offset = $offset;
+        $this->offset = $offset < 0 ? null : $offset;
 
         return $this;
     }

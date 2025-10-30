@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Monoelf\Framework\http;
+namespace Monoelf\Framework\resource;
 
+use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
@@ -36,7 +37,11 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
      */
     public function create(array $values): int
     {
-        return $this->connection->insert($this->resourceName, $values);
+        try {
+            return $this->connection->insert($this->resourceName, $values);
+        } catch (\PDOException $exception) {
+            throw new InvalidArgumentException($exception->getMessage(), 0, $exception);
+        }
     }
 
     /**

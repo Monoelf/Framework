@@ -8,7 +8,9 @@
     - FileQueryBuilder сборщик запросов
     - FileResourceDataFiler класс для построения QueryBuilder
     - FileResourceWriter класс для создания, обновления, удаления заисей
-    - Регистрация синглтона в контейнере
+    - Регистрация синглтона в контейнере 
+- Изменено:
+    - Убран контейнер из конструктора FileDataFilter
 
 ## [ [0.4.0](https://github.com/Monoelf/Framework/tree/0.4.0) ] - 21.08.2025
 

@@ -10,6 +10,6 @@ class JsonResponse extends BaseControllerResponse
 {
     public function __construct(mixed $data = null, int $status = 200)
     {
-        parent::__construct($status, array($data));
+        parent::__construct($status, is_array($data) === false ? array($data) : $data);
     }
 }

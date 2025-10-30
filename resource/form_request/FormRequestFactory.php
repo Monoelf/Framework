@@ -37,7 +37,11 @@ final readonly class FormRequestFactory implements FormRequestFactoryInterface
         $data = $this->request->getParsedBody();
 
         foreach ($form->getFields() as $fieldName) {
-            $form->setValue($fieldName, $data[$fieldName] ?? null);
+            if (isset($data[$fieldName]) === false) {
+                continue;
+            }
+
+            $form->setValue($fieldName, $data[$fieldName]);
         }
 
         return $form;

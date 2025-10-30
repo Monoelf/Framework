@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Monoelf\Framework\http;
+namespace Monoelf\Framework\resource;
 
 use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
@@ -98,6 +98,10 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
             throw new InvalidArgumentException('Поля и фильтры должны быть массивами');
         }
 
+        if (empty($fields) === true) {
+            $fields = $this->accessibleFields;
+        }
+
         return [$fields, $filters];
     }
 
@@ -111,7 +115,12 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
 
         foreach ($filters as $field => $operators) {
             if (is_array($operators) === false) {
-                $conditions[$field] = $operators;
+                $conditions[] = [
+                    'field' => $field,
+                    'operator' => '=',
+                    'value' => $operators,
+                ];
+
                 continue;
             }
 
