@@ -164,7 +164,7 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors(), JSON_UNESCAPED_UNICODE));
+            throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
         try {
@@ -188,7 +188,11 @@ abstract class AbstractResourceController
             throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
-        $rowsCount = $this->resourceWriter->update($id, $form->getValues());
+        try {
+            $rowsCount = $this->resourceWriter->update($id, $form->getValues());
+        } catch (InvalidArgumentException $exception) {
+            throw new HttpBadRequestException($exception->getMessage());
+        }
 
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();
@@ -211,7 +215,11 @@ abstract class AbstractResourceController
             throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
-        $rowsCount = $this->resourceWriter->patch($id, $form->getValues());
+        try {
+            $rowsCount = $this->resourceWriter->patch($id, $form->getValues());
+        } catch (InvalidArgumentException $exception) {
+            throw new HttpBadRequestException($exception->getMessage());
+        }
 
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();

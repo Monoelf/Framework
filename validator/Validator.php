@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Monoelf\Framework\validator;
 
 use Monoelf\Framework\container\ContainerInterface;
+use Monoelf\Framework\resource\form_request\FormRequestInterface;
 use Monoelf\Framework\validator\rule_validators\BooleanValidator;
 use Monoelf\Framework\validator\rule_validators\IntegerValidator;
 use Monoelf\Framework\validator\rule_validators\RequiredValidator;
@@ -69,5 +70,28 @@ final class Validator
         }
 
         $this->container->get($this->validators[$ruleName])->validate($value, $options);
+    }
+
+    public function validateForm(
+        FormRequestInterface $formRequest,
+        string|array $rule,
+        array $attributes = []
+    ): void {
+        $formValidator = $rule;
+        $ruleOptions = [];
+
+        if (is_array($rule) === true) {
+            $formValidator = $rule[0];
+            $ruleOptions = array_slice($rule, 1, null, true);
+        }
+
+        $formValidator = $this->container->build($formValidator, [
+            'options' => [
+                'attributes' => $attributes,
+                'ruleOptions' => $ruleOptions,
+            ]
+        ]);
+        /* @var FormValidatorInterface $formValidator */
+        $formValidator->validate($formRequest);
     }
 }

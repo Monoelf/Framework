@@ -37,11 +37,7 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
      */
     public function create(array $values): int
     {
-        try {
-            return $this->connection->insert($this->resourceName, $values);
-        } catch (\PDOException $exception) {
-            throw new InvalidArgumentException($exception->getMessage(), 0, $exception);
-        }
+        return $this->connection->insert($this->resourceName, $values);
     }
 
     /**
@@ -53,6 +49,8 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
     {
         $values = $this->prepareValues($values);
 
+        $values['id'] = (int)$id;
+
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
@@ -63,6 +61,8 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
      */
     public function patch(string|int $id, array $values): int
     {
+        $values['id'] = (int)$id;
+
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 

@@ -214,6 +214,9 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     {
         foreach ($condition as $field => $filterValue) {
             $itemValue = $item[$field] ?? null;
+            $filterValue = is_array($filterValue) === true
+                ? $filterValue
+                : ['$eq' => $filterValue];
 
             if ($this->matchArrayCondition($filterValue, $itemValue) === false) {
                 return false;

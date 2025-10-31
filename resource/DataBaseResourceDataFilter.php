@@ -19,7 +19,7 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
 
     public function __construct(
         private readonly DataBaseConnectionInterface $connection,
-        private readonly DataBaseQueryBuilderInterface       $queryBuilder
+        private readonly DataBaseQueryBuilderInterface $queryBuilder
     ) {}
 
     /**
