@@ -114,6 +114,7 @@ abstract class AbstractResourceController
      *
      * @return JsonResponse
      * @throws HttpNotFoundException
+     * @throws HttpForbiddenException
      */
     public function actionList(): JsonResponse
     {
@@ -176,6 +177,11 @@ abstract class AbstractResourceController
         return new CreateResponse();
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpBadRequestException
+     * @throws HttpNotFoundException
+     */
     public function actionUpdate(int $id): UpdateResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::UPDATE);
@@ -201,6 +207,11 @@ abstract class AbstractResourceController
         return new UpdateResponse();
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpBadRequestException
+     * @throws HttpNotFoundException
+     */
     public function actionPatch(int $id): PatchResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::PATCH);
@@ -228,6 +239,10 @@ abstract class AbstractResourceController
         return new PatchResponse();
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpNotFoundException
+     */
     public function actionDelete(int $id): DeleteResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::DELETE);
