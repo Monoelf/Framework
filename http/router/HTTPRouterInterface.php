@@ -99,4 +99,12 @@ interface HTTPRouterInterface
      * @throws HttpNotFoundException если маршрут не зарегистрирован в конфигурации машрутов
      */
     function dispatch(ServerRequestInterface $request): mixed;
+
+    /**
+     * @param string $name
+     * @param string $controller
+     * @param array $config
+     * @return void
+     */
+    function addResource(string $name, string $controller, array $config = []): void;
 }

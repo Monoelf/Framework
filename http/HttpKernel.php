@@ -8,7 +8,7 @@ use Monoelf\Framework\common\ErrorHandlerInterface;
 use Monoelf\Framework\common\ModuleInterface;
 use Monoelf\Framework\config_storage\ConfigurationStorage;
 use Monoelf\Framework\container\ContainerInterface;
-use Monoelf\Framework\http\dto\ResponseDto;
+use Monoelf\Framework\http\dto\BaseControllerResponse;
 use Monoelf\Framework\http\exceptions\HttpException;
 use Monoelf\Framework\http\exceptions\HttpNotAcceptableException;
 use Monoelf\Framework\http\router\HTTPRouterInterface;
@@ -41,7 +41,7 @@ final class HttpKernel implements HttpKernelInterface
             $statusCode = StatusCodeEnum::STATUS_OK->value;
             $responseContentType = 'text/html; charset=utf-8';
 
-            if ($result instanceof ResponseDto) {
+            if ($result instanceof BaseControllerResponse === true) {
                 $statusCode = $result->statusCode;
                 $result = $result->responseBody;
             }

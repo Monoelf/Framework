@@ -6,5 +6,5 @@ namespace Monoelf\Framework\resource\form_request;
 
 interface FormRequestFactoryInterface
 {
-    public function create(string $formClassName): FormRequestInterface;
+    public function create(string $formClassName, array $rules = []): FormRequestInterface;
 }
