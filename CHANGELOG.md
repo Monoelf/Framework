@@ -3,13 +3,22 @@
 Формат основан на [стандарте формата CHANGELOG](https://keepachangelog.com/en/1.0.0/),
 и придерживается [правил версионирования](https://semver.org/spec/v2.0.0.html).
 
+## [ [0.5.0](https://github.com/Monoelf/Framework/tree/0.5.0) ] - 01.11.2025
 - Реализовано:
     - JsonDataBaseConnection класс для работы с json файлами
-    - FileQueryBuilder сборщик запросов
-    - FileResourceDataFiler класс для построения QueryBuilder
-    - FileResourceWriter класс для создания, обновления, удаления заисей
-    - Регистрация синглтона в контейнере
-    - FormValidatorInterface для валидации формы
+    - DataBaseConnection для работы с базой данных
+    - Класс ресурса, для регистрации в роутере
+    - AbstractResourceController содержащий базовую логику работы с ресурсом
+    - Класс динамической формы инкапсулирующий валидацию данных из запроса
+    - Фабрика формы из запроса
+    - Построители запросов (QueryBuilder) бд и файловый
+    - ResourceWriter, DataFilter - высокоуровневые обработчики чтения/записи ресурсов
+    - Перерегистрация синглтона в контейнере
+    - Валидатор с контрактом правил валидации
+    - Добавлена валидация на уровне роутера
+    - FormValidatorInterface для валидации формы целиком
+- Исправлено:
+    - Реквест не обрабатывал put/patch запросы
 
 ## [ [0.4.0](https://github.com/Monoelf/Framework/tree/0.4.0) ] - 21.08.2025
 
