@@ -113,6 +113,7 @@ abstract class AbstractResourceController
      * ]
      *
      * @return JsonResponse
+     * @throws HttpNotFoundException
      * @throws HttpForbiddenException
      */
     public function actionList(): JsonResponse
@@ -151,6 +152,10 @@ abstract class AbstractResourceController
         return new JsonResponse($data);
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpBadRequestException
+     */
     public function actionCreate(): CreateResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::CREATE);
@@ -163,11 +168,20 @@ abstract class AbstractResourceController
             throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
-        $this->resourceWriter->create($form->getValues());
+        try {
+            $this->resourceWriter->create($form->getValues());
+        } catch (InvalidArgumentException $exception) {
+            throw new HttpBadRequestException($exception->getMessage());
+        }
 
         return new CreateResponse();
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpBadRequestException
+     * @throws HttpNotFoundException
+     */
     public function actionUpdate(int $id): UpdateResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::UPDATE);
@@ -180,7 +194,11 @@ abstract class AbstractResourceController
             throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
-        $rowsCount = $this->resourceWriter->update($id, $form->getValues());
+        try {
+            $rowsCount = $this->resourceWriter->update($id, $form->getValues());
+        } catch (InvalidArgumentException $exception) {
+            throw new HttpBadRequestException($exception->getMessage());
+        }
 
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();
@@ -189,6 +207,11 @@ abstract class AbstractResourceController
         return new UpdateResponse();
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpBadRequestException
+     * @throws HttpNotFoundException
+     */
     public function actionPatch(int $id): PatchResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::PATCH);
@@ -203,7 +226,11 @@ abstract class AbstractResourceController
             throw new HttpBadRequestException(json_encode($form->getErrors()));
         }
 
-        $rowsCount = $this->resourceWriter->patch($id, $form->getValues());
+        try {
+            $rowsCount = $this->resourceWriter->patch($id, $form->getValues());
+        } catch (InvalidArgumentException $exception) {
+            throw new HttpBadRequestException($exception->getMessage());
+        }
 
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();
@@ -212,6 +239,10 @@ abstract class AbstractResourceController
         return new PatchResponse();
     }
 
+    /**
+     * @throws HttpForbiddenException
+     * @throws HttpNotFoundException
+     */
     public function actionDelete(int $id): DeleteResponse
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::DELETE);

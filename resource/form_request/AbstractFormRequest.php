@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource\form_request;
 
 use InvalidArgumentException;
-use Monoelf\Framework\resource\form_request\FormRequestInterface;
+use Monoelf\Framework\validator\FormValidatorInterface;
 use Monoelf\Framework\validator\ValidationException;
 use Monoelf\Framework\validator\Validator;
 
@@ -64,6 +64,12 @@ abstract class AbstractFormRequest implements FormRequestInterface
 
     private function validateByRule(array $values, array $attributes, array|string $rule): void
     {
+        if ($this->isRuleFormValidation(is_string($rule) === true ? $rule : $rule[0])) {
+            $this->validator->validateForm($this, $rule, $attributes);
+
+            return;
+        }
+
         foreach ($attributes as $attribute) {
             if (
                 $this->skipEmptyValues === true
@@ -76,11 +82,16 @@ abstract class AbstractFormRequest implements FormRequestInterface
             }
 
             try {
-                $this->validator->validate($values[$attribute], $rule);
+                $this->validator->validate($values[$attribute] ?? null, $rule);
             } catch (ValidationException $e) {
                 $this->addError($attribute, $e->getMessage());
             }
         }
+    }
+
+    private function isRuleFormValidation(string $rule): bool
+    {
+        return class_exists($rule) === true && is_subclass_of($rule, FormValidatorInterface::class) === true;
     }
 
     public function addError(string $attribute, string $message): void

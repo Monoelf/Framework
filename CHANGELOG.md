@@ -9,6 +9,7 @@
     - FileResourceDataFiler класс для построения QueryBuilder
     - FileResourceWriter класс для создания, обновления, удаления заисей
     - Регистрация синглтона в контейнере
+    - FormValidatorInterface для валидации формы
 
 ## [ [0.4.0](https://github.com/Monoelf/Framework/tree/0.4.0) ] - 21.08.2025
 

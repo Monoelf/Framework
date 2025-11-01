@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Monoelf\Framework\http;
+namespace Monoelf\Framework\resource;
 
+use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
@@ -48,6 +49,8 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
     {
         $values = $this->prepareValues($values);
 
+        $values['id'] = (int)$id;
+
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
@@ -58,6 +61,8 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
      */
     public function patch(string|int $id, array $values): int
     {
+        $values['id'] = (int)$id;
+
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
