@@ -1,0 +1,5 @@
+/tests
+/tests/*
+/codeception.yml
+.gitignore
+/*.dist

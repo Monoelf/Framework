@@ -25,7 +25,8 @@
     "require": {
         "psr/http-message": "^2.0",
         "psr/container": "^2.0",
-        "ext-posix": "*"
+        "ext-posix": "*",
+        "ext-mbstring": "*"
     },
     "scripts": {
         "test": "phpunit"

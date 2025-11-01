@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Monoelf\Framework\http\router;
 
 use Monoelf\Framework\container\ContainerInterface;
+use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
 use InvalidArgumentException;
 use Monoelf\Framework\http\ServerResponseInterface;
+use Monoelf\Framework\validator\ValidationException;
+use Monoelf\Framework\validator\Validator;
 use Psr\Http\Message\ServerRequestInterface;
+use Throwable;
 
 final class Router implements HTTPRouterInterface, MiddlewareAssignable
 {
@@ -20,7 +24,10 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private array $groupStack = [];
 
-    public function __construct(private readonly ContainerInterface $container) {}
+    public function __construct(
+        private readonly ContainerInterface $container,
+        private readonly Validator $validator,
+    ) {}
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
@@ -138,7 +145,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
                 $route = $possibleRoute;
                 $pathParams = array_filter(
                     $matches,
-                    fn ($key) => is_int($key) === false,
+                    fn($key) => is_int($key) === false,
                     ARRAY_FILTER_USE_KEY
                 );
                 $pathParams = array_map('urldecode', $pathParams);
@@ -229,20 +236,22 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private function prepareParams(string $route): array
     {
-        preg_match_all('/\{(\??)(\w+)(?:=(\w+))?\}/', $route, $matches, PREG_SET_ORDER);
+        preg_match_all('/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?}/', $route, $matches, PREG_SET_ORDER);
 
         $params = [];
 
         foreach ($matches as $match) {
             $params[] = [
                 'name' => $match[2],
+                'type' => $match[3] ?? 'string',
                 'required' => $match[1] !== '?',
-                'default' => $match[3] ?? null,
+                'default' => $match[4] ?? null,
             ];
         }
 
         return $params;
     }
+
 
     /**
      * Получение значений параметров запроса определенных для маршрута
@@ -256,7 +265,7 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      * @return array
      * Пример:
      * ['firstNumber' => 700, 'secondNumber' => 900]
-     * @throws InvalidArgumentException если в строке запроса не передан параметр объявленный как обязательный
+     * @throws HttpBadRequestException
      */
     private function mapParams(array $queryParams, array $params): array
     {
@@ -264,20 +273,40 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
         foreach ($params as $param) {
             $name = $param['name'];
+            $value = $queryParams[$name] ?? $param['default'];
 
-            if (array_key_exists($name, $queryParams) === true) {
-                $result[$name] = $queryParams[$name];
-                continue;
+            if ($value === null && $param['required'] === true) {
+                throw new HttpBadRequestException("Отсутствует обязательный параметр: {$name}");
             }
 
-            if ($param['required'] === true) {
-                throw new InvalidArgumentException("Отсутствует обязательный параметр: {$name}");
+            if ($value !== null) {
+                $value = $this->validateParams($value, $param['type'], $name);
             }
 
-            $result[$name] = $param['default'];
+            $result[$name] = $value;
         }
 
         return $result;
+    }
+
+    /**
+     * @param mixed $value
+     * @param string $type
+     * @param string $name
+     * @return mixed
+     * @throws HttpBadRequestException
+     */
+    private function validateParams(mixed $value, string $type, string $name): mixed
+    {
+        try {
+            $this->validator->validate($value, $type);
+
+            return $value;
+        } catch (ValidationException $e) {
+            throw new HttpBadRequestException(
+                "Ошибка валидации параметра '{$name}': " . $e->getMessage()
+            );
+        }
     }
 
     /**
@@ -311,11 +340,28 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
      */
     private function buildRegexPath(string $routeTemplate): string
     {
-        $parts = explode('?', $routeTemplate, 2);
-        $pathPart = $parts[0];
+        $regex = preg_replace_callback(
+            '/\{(\??):(\w+)(?:\|(\w+))?(?:=(\w+))?}/',
+            function (array $match): string {
+                $name = $match[2];
 
-        $regex = preg_replace('#\{(\w+)\}#', '(?P<$1>[^/]+)', $pathPart);
+                return "(?P<{$name}>[^/]+)";
+            },
+            explode('?', $routeTemplate, 2)[0]
+        );
 
         return '#^' . $regex . '$#';
+    }
+
+
+    /**
+     * @param string $name
+     * @param string $controller
+     * @param array $config
+     * @return void
+     */
+    public function addResource(string $name, string $controller, array $config = []): void
+    {
+        (new Resource($name, $controller, $config))->build($this);
     }
 }

@@ -1,0 +1,333 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Monoelf\Framework\resource\connection;
+
+use Monoelf\Framework\common\AliasManager;
+use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
+use Monoelf\Framework\resource\exceptions\FileNotExistsException;
+use Monoelf\Framework\resource\exceptions\InvalidQueryException;
+use Monoelf\Framework\resource\query\file\FileQueryBuilderInterface;
+use Monoelf\Framework\resource\query\file\StatementParameters;
+use Monoelf\Framework\resource\query\OperatorsEnum;
+use Monoelf\Framework\resource\query\QueryBuilderInterface;
+
+final class JsonDataBaseConnection implements DataBaseConnectionInterface
+{
+    private ?string $lastInsertId = null;
+    private array $operators;
+
+    public function __construct(
+        private readonly AliasManager $aliasManager,
+        string $resourcesPath = '@app/runtime',
+    ) {
+        $this->aliasManager->addAlias('@file-resources', $resourcesPath);
+        $this->operators = [
+            OperatorsEnum::EQ->value => fn (string $item, string $compare): bool => $item === $compare,
+            OperatorsEnum::NE->value => fn (string $item, string $compare): bool => $item !== $compare,
+            OperatorsEnum::GT->value => fn (string $item, string $compare): bool => $item > $compare,
+            OperatorsEnum::GTE->value => fn (string $item, string $compare): bool => $item >= $compare,
+            OperatorsEnum::LT->value => fn (string $item, string $compare): bool => $item < $compare,
+            OperatorsEnum::LTE->value => fn (string $item, string $compare): bool => $item <= $compare,
+            OperatorsEnum::IN->value => fn (string $item, array $compare): bool => in_array($item, $compare) === true,
+            OperatorsEnum::NIN->value => fn (string $item, array $compare): bool => in_array($item, $compare) === false,
+            OperatorsEnum::LIKE->value => fn (string $item, string $compare): bool => str_contains($item, $compare) === true,
+        ];
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
+    public function select(QueryBuilderInterface $query): array
+    {
+        $statement = $this->getStatement($query);
+        $filepath = $this->getFilepath($statement->resource);
+
+        $data = $this->readArrayFromJasonFile($filepath);
+
+        return $this->applyQueryParameters($data, $statement);
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
+    public function selectOne(QueryBuilderInterface $query): null|array
+    {
+        return $this->select($query)[0] ?? null;
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws InvalidQueryException
+     * @throws \JsonException
+     */
+    public function selectColumn(QueryBuilderInterface $query): array
+    {
+        $statement = $this->getStatement($query);
+
+        if (count($statement->selectFields) !== 1) {
+            throw new InvalidQueryException('Запрос должен содержать только одно поле, переданно: ' . count($statement->selectFields));
+        }
+
+        $result = $this->select($query);
+
+        return array_map(fn ($item) => $item[$statement->selectFields[0]] ?? null, $result);
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
+    public function selectScalar(QueryBuilderInterface $query): mixed
+    {
+        $result = $this->selectOne($query);
+
+        if ($result === null) {
+            return null;
+        }
+
+        return array_values($result)[0] ?? null;
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
+    public function update(string $resource, array $data, array $condition): int
+    {
+        $filepath = $this->getFilepath($resource);
+
+        $existingData = $this->readArrayFromJasonFile($filepath);
+
+        $updatedCount = 0;
+
+        foreach ($existingData as $key => $item) {
+            if ($this->matchCondition($item, $condition) === true) {
+                $existingData[$key] = array_merge($item, $data);
+                $updatedCount++;
+            }
+        }
+
+        $this->writeArrayToJasonFile($filepath, $existingData);
+
+        return $updatedCount;
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     * @throws InvalidQueryException
+     */
+    public function insert(string $resource, array $data): int
+    {
+        $filepath = $this->getFilepath($resource);
+        $existingData = $this->readArrayFromJasonFile($filepath);
+
+        $lastId = $this->loadLastId($resource);
+        $insertingId = isset($data['id']) === true
+            ? (int)$data['id']
+            : $lastId + 1;
+
+        $allExistingIds = array_column($existingData, 'id');
+
+        if (in_array($insertingId, $allExistingIds, true) === true) {
+            if ($lastId + 1 !== $insertingId) {
+                throw new InvalidQueryException("Запись с id = $insertingId уже существует в ресурсе '$resource'");
+            }
+
+            $insertingId = max($allExistingIds) + 1;
+        }
+
+        $data['id'] = $insertingId;
+        $existingData[] = $data;
+
+        $this->writeArrayToJasonFile($filepath, $existingData);
+
+        if ($insertingId > $lastId) {
+            $this->saveLastId($resource, $insertingId);
+        }
+
+        $this->lastInsertId = (string)$insertingId;
+
+        return 1;
+    }
+
+    /**
+     * @throws FileNotExistsException
+     * @throws \JsonException
+     */
+    public function delete(string $resource, array $condition): int
+    {
+        $filepath = $this->getFilepath($resource);
+
+        $existingData = $this->readArrayFromJasonFile($filepath);
+
+        $filteredData = array_filter($existingData, fn (array $item): bool => $this->matchCondition($item, $condition) === false);
+        $deletedCount = count($existingData) - count($filteredData);
+
+        $this->writeArrayToJasonFile($filepath, array_values($filteredData));
+
+        return $deletedCount;
+    }
+
+    public function getLastInsertId(): string
+    {
+        return $this->lastInsertId ?? '';
+    }
+
+    private function getStatement(FileQueryBuilderInterface $queryBuilder): StatementParameters
+    {
+        return $queryBuilder->getStatement();
+    }
+
+    private function applyQueryParameters(array $data, StatementParameters $statement): array
+    {
+        if (empty($statement->whereClause) === false) {
+            $data = array_filter($data, fn (array $item): bool => $this->matchCondition($item, $statement->whereClause));
+        }
+
+        if (empty($statement->orderByClause) === false) {
+            $data = $this->sortData($data, $statement->orderByClause);
+        }
+
+        if ($statement->limit !== null || $statement->offset !== null) {
+            $data = array_slice($data, $statement->offset ?? 0, $statement->limit);
+        }
+
+        if (empty($statement->selectFields) === false) {
+            $flippedSelectFields = array_flip($statement->selectFields);
+
+            $data = array_map(
+                fn (array $item): array => array_intersect_key($item, $flippedSelectFields),
+                $data
+            );
+        }
+
+
+        return array_values($data);
+    }
+
+    private function matchCondition(array $item, array $condition): bool
+    {
+        foreach ($condition as $field => $filterValue) {
+            $itemValue = $item[$field] ?? null;
+            $filterValue = is_array($filterValue) === true
+                ? $filterValue
+                : ['$eq' => $filterValue];
+
+            if ($this->matchArrayCondition($filterValue, $itemValue) === false) {
+                return false;
+            }
+
+        }
+
+        return true;
+    }
+
+    private function matchArrayCondition(array $fieldFilters, mixed $itemValue): bool
+    {
+        foreach ($fieldFilters as $op => $value) {
+            if (isset($this->operators[$op]) === false) {
+                throw new \InvalidArgumentException("Оператор {$op} не поддерживается");
+            }
+
+            if ($this->operators[$op]((string)$itemValue, (string)$value) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function sortData(array $data, array $orderBy): array
+    {
+        usort($data, function (array $firstItem, array $secondItem) use ($orderBy): int {
+            foreach ($orderBy as $field => $direction) {
+                if (($firstItem[$field] ?? null) === ($secondItem[$field] ?? null)) {
+                    continue;
+                }
+
+                $sortOrder = strtolower($direction) === 'desc' ? 1 : -1;
+
+                return ($firstItem[$field] ?? null) < ($secondItem[$field] ?? null) ? $sortOrder : -$sortOrder;
+            }
+
+            return 0;
+        });
+
+        return $data;
+    }
+
+    /**
+     * @throws FileNotExistsException
+     */
+    private function getFilepath(string $resource): string
+    {
+        $filepath = $this->aliasManager->buildPath('@file-resources/' . $resource . '.json');
+
+        if (file_exists($filepath) === false) {
+            throw new FileNotExistsException("Файл $filepath не существует");
+        }
+
+        return $filepath;
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private function saveLastId(string $resource, int $id): void
+    {
+        $filepathMeta = $this->aliasManager->buildPath('@file-resources/_meta.json');
+
+        if (file_exists($filepathMeta) === false) {
+            $dir = dirname($filepathMeta);
+
+            if (is_dir($dir) === false) {
+                mkdir($dir, 0755, true);
+            }
+
+            $this->writeArrayToJasonFile($filepathMeta, []);
+            chmod($filepathMeta, 0644);
+        }
+
+        $existingData = $this->readArrayFromJasonFile($filepathMeta);
+        $existingData[$resource] = $id;
+
+        $this->writeArrayToJasonFile($filepathMeta, $existingData);
+        chmod($filepathMeta, 0644);
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private function loadLastId(string $resource): int
+    {
+        $filepathMeta = $this->aliasManager->buildPath('@file-resources/_meta.json');
+
+        if (file_exists($filepathMeta) === false) {
+            $this->saveLastId($resource, 0);
+        }
+
+        return $this->readArrayFromJasonFile($filepathMeta)[$resource] ?? 0;
+    }
+
+    private function writeArrayToJasonFile(string $filepath, array $data): void
+    {
+        if (file_put_contents($filepath, json_encode($data, JSON_THROW_ON_ERROR)) === false) {
+            $message = error_get_last()['message'] ?? 'Не удалось записать файл';
+
+            throw new \RuntimeException("Ошибка записи в файл '$filepath': $message");
+        }
+    }
+
+    /**
+     * @throws \JsonException
+     */
+    private function readArrayFromJasonFile(string $filepath): array
+    {
+        return json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
+    }
+}
