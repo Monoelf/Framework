@@ -17,6 +17,20 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
     private ?string $offset = null;
     private array $bindings = [];
 
+    public function reset(): static
+    {
+        $this->select = null;
+        $this->from = null;
+        $this->where = null;
+        $this->joins = [];
+        $this->orderBy = null;
+        $this->limit = null;
+        $this->offset = null;
+        $this->bindings = [];
+
+        return $this;
+    }
+
     /**
      * @param array|string $fields
      * @return $this
@@ -30,7 +44,7 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         $escapedFields = array_map(function (string $field): string {
             if (stripos($field, ' AS ') !== false) {
                 [$original, $alias] = explode(' AS ', $field, 2);
-                return $this->escapeField(trim($original)) . ' AS ' . $this->escapeField(trim($alias));
+                return $this->escapeField(trim($original)) . ' AS ' . $this->escapeField(trim($alias), true);
             }
 
             return $this->escapeField($field);
@@ -262,10 +276,11 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
     }
 
     /**
-     * @param $field
+     * @param string $field
+     * @param bool $isAlias
      * @return string
      */
-    private function escapeField($field): string
+    private function escapeField(string $field, bool $isAlias = false): string
     {
         if ($field === '*') {
             return $field;
@@ -275,7 +290,7 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
             return $field;
         }
 
-        if (str_contains($field, '.') === true) {
+        if (str_contains($field, '.') === true && $isAlias === false) {
             $parts = explode('.', $field);
 
             return '`' . implode('`.`', array_map('trim', $parts)) . '`';

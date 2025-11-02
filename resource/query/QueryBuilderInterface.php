@@ -21,4 +21,6 @@ interface QueryBuilderInterface
     public function limit(int $limit): static;
 
     public function offset(int $offset): static;
+
+    public function reset(): static;
 }
