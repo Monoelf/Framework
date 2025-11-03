@@ -32,7 +32,7 @@ final class HttpErrorHandler implements ErrorHandlerInterface
         array $renderingStrategies = [],
         private string $mode = StrategyNameEnum::HTML->value,
     ) {
-        $this->renderingStrategies = array_merge_recursive($this->defaultRenderingStrategies, $renderingStrategies);
+        $this->renderingStrategies = array_merge($this->defaultRenderingStrategies, $renderingStrategies);
     }
 
     /**
