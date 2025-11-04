@@ -65,7 +65,9 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
 
         $row = $this->connection->selectOne($this->queryBuilder);
 
-        return $this->mapRelationshipsOnOne($row, $condition['expand'] ?? []);
+        return $row !== null
+            ? $this->mapRelationshipsOnOne($row, $condition['expand'] ?? [])
+            : null;
     }
 
     private function mapRelationshipsOnAll(array $data, array $relationships): array
@@ -121,31 +123,6 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         return [$fields, $filters, $relationships];
     }
 
-    private function buildFilterConditions(array $filters): array
-    {
-        $conditions = [];
-
-        foreach ($filters as $field => $operators) {
-            $field = $this->buildFilterFieldName($field);
-
-            if (is_array($operators) === false) {
-                $conditions[] = [
-                    'field' => $field,
-                    'operator' => '=',
-                    'value' => $operators,
-                ];
-
-                continue;
-            }
-
-            foreach ($operators as $operator => $value) {
-                $conditions[] = $this->appendOperatorCondition($field, $operator, $value);
-            }
-        }
-
-        return $conditions;
-    }
-
     private function prepareJoins(array $joins): void
     {
         foreach ($joins as $relatedResource) {
@@ -153,9 +130,9 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
 
             if (isset($relationRules['otherRelationshipKey']) === true) {
                 $this->queryBuilder->join('LEFT', $relatedResource, $this->buildJoinCondition(
-                        $relatedResource,
-                        $relationRules['table'],
-                        $relationRules['otherRelationshipKey']
+                    $relatedResource,
+                    $relationRules['table'],
+                    $relationRules['otherRelationshipKey']
                 ));
             }
 
@@ -177,26 +154,6 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         $targetKey = $key[$originKey];
 
         return $originTable . '.' . $originKey . ' = ' . $targetTable . '.' . $targetKey;
-    }
-
-    private function appendOperatorCondition(string $field, string $operator, mixed $value): array
-    {
-        return [
-            'field' => $field,
-            'operator' => match ($operator) {
-                OperatorsEnum::EQ->value => '=',
-                OperatorsEnum::NE->value => '!=',
-                OperatorsEnum::GT->value => '>',
-                OperatorsEnum::LT->value => '<',
-                OperatorsEnum::GTE->value => '>=',
-                OperatorsEnum::LTE->value => '<=',
-                OperatorsEnum::LIKE->value => 'LIKE',
-                OperatorsEnum::IN->value => 'IN',
-                OperatorsEnum::NIN->value => 'NOT IN',
-                default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
-            },
-            'value' => $value
-        ];
     }
 
     private function validateFields(array $fields): void
@@ -226,48 +183,15 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         }
     }
 
-    private function buildFieldName(string $field): string
-    {
-        if (str_contains($field, '.') === true) {
-            $field = $field . ' AS ' . $field;
-        }
-
-        if (str_contains($field, '.') === false) {
-            $field = $this->resourceName . '.' . $field;
-        }
-
-        return $field;
-    }
-
-    private function buildFilterFieldName(string $field): string
-    {
-        if (str_contains($field, '.') === false) {
-            $field = $this->resourceName . '.' . $field;
-        }
-
-        return $field;
-    }
-
-    private function buildFields(array $fields): array
-    {
-        $result = [];
-
-        foreach ($fields as $field) {
-            $result[] = $this->buildFieldName($field);
-        }
-
-        return $result;
-    }
-
     private function prepareQuery(array $conditions): void
     {
         [$fields, $filters, $relationships] = $this->extractConditionParts($conditions);
 
         $this->queryBuilder
             ->reset()
-            ->select($this->buildFields($fields))
+            ->select($fields)
             ->from($this->resourceName)
-            ->where($this->buildFilterConditions($filters));
+            ->where($filters);
 
         $this->prepareJoins($relationships);
     }

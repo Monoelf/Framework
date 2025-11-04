@@ -10,6 +10,14 @@ class JsonResponse extends BaseControllerResponse
 {
     public function __construct(mixed $data = null, int $status = 200)
     {
-        parent::__construct($status, is_array($data) === false ? array($data) : $data);
+        if ($data !== null) {
+            $data = is_array($data) === false ? array($data) : $data;
+        }
+
+        parent::__construct(
+            $status,
+            $data,
+            'application/json'
+        );
     }
 }

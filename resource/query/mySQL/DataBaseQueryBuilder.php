@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource\query\mySQL;
 
 use InvalidArgumentException;
+use Monoelf\Framework\resource\query\OperatorsEnum;
 
 final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 {
@@ -16,6 +17,8 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
     private ?string $limit = null;
     private ?string $offset = null;
     private array $bindings = [];
+    private string $tmpResourceName = '$$$TMP_RESOURCE_NAME$$$';
+    private ?string $originalResourceName = null;
 
     public function reset(): static
     {
@@ -27,6 +30,7 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         $this->limit = null;
         $this->offset = null;
         $this->bindings = [];
+        $this->originalResourceName = null;
 
         return $this;
     }
@@ -40,6 +44,8 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         if (is_string($fields) === true) {
             $fields = [$fields];
         }
+
+        $fields = $this->buildFields($fields);
 
         $escapedFields = array_map(function (string $field): string {
             if (stripos($field, ' AS ') !== false) {
@@ -72,11 +78,13 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
             $alias = $this->escapeField($resource[1]);
 
             $this->from = "FROM $table AS $alias";
+            $this->originalResourceName = $resource[0];
 
             return $this;
         }
 
         $this->from = 'FROM ' . $this->escapeField($resource);
+        $this->originalResourceName = $resource;
 
         return $this;
     }
@@ -88,6 +96,8 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
      */
     public function where(array $condition): static
     {
+        $condition = $this->buildFilterConditions($condition);
+
         $this->where = '';
 
         $this->bindings = [];
@@ -111,6 +121,60 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         }
 
         return $this;
+    }
+
+    private function buildFilterConditions(array $filters): array
+    {
+        $conditions = [];
+
+        foreach ($filters as $field => $operators) {
+            $field = $this->buildFilterFieldName($field);
+
+            if (is_array($operators) === false) {
+                $conditions[] = [
+                    'field' => $field,
+                    'operator' => '=',
+                    'value' => $operators,
+                ];
+
+                continue;
+            }
+
+            foreach ($operators as $operator => $value) {
+                $conditions[] = $this->appendOperatorCondition($field, $operator, $value);
+            }
+        }
+
+        return $conditions;
+    }
+
+    private function buildFilterFieldName(string $field): string
+    {
+        if (str_contains($field, '.') === false) {
+            $field = $this->tmpResourceName . '.' . $field;
+        }
+
+        return $field;
+    }
+
+    private function appendOperatorCondition(string $field, string $operator, mixed $value): array
+    {
+        return [
+            'field' => $field,
+            'operator' => match ($operator) {
+                OperatorsEnum::EQ->value => '=',
+                OperatorsEnum::NE->value => '!=',
+                OperatorsEnum::GT->value => '>',
+                OperatorsEnum::LT->value => '<',
+                OperatorsEnum::GTE->value => '>=',
+                OperatorsEnum::LTE->value => '<=',
+                OperatorsEnum::LIKE->value => 'LIKE',
+                OperatorsEnum::IN->value => 'IN',
+                OperatorsEnum::NIN->value => 'NOT IN',
+                default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
+            },
+            'value' => $value
+        ];
     }
 
     /**
@@ -255,6 +319,10 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
      */
     public function getStatement(): StatementParameters
     {
+        if ($this->originalResourceName === null) {
+            throw new InvalidArgumentException('Имя ресурса не задано');
+        }
+
         $sqlParts = [
             $this->select,
             $this->from,
@@ -267,12 +335,30 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 
         $sqlParts = array_filter(
             $sqlParts,
-            static fn($part) => $part !== null && $part !== ''
+            static fn (?string $part): bool => $part !== null && $part !== ''
         );
 
-        $sql = implode(' ', $sqlParts);
+        $sql = str_replace($this->tmpResourceName, $this->originalResourceName, implode(' ', $sqlParts));
 
         return new StatementParameters($sql, $this->bindings);
+    }
+
+    private function buildFieldName(string $field): string
+    {
+        return str_contains($field, '.') === true
+            ? $field . ' AS ' . $field
+            : $this->tmpResourceName . '.' . $field;
+    }
+
+    private function buildFields(array $fields): array
+    {
+        $result = [];
+
+        foreach ($fields as $field) {
+            $result[] = $this->buildFieldName($field);
+        }
+
+        return $result;
     }
 
     /**
@@ -286,14 +372,11 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
             return $field;
         }
 
-        if ((bool)preg_match('/^[a-z]+\(.*\)$/i', $field) === true) {
-            return $field;
-        }
-
         if (str_contains($field, '.') === true && $isAlias === false) {
             $parts = explode('.', $field);
+            $preparedParts = array_map(fn (string $part): string => $this->escapeField(trim($part)), $parts);
 
-            return '`' . implode('`.`', array_map('trim', $parts)) . '`';
+            return implode('.', $preparedParts);
         }
 
         return '`' . str_replace('`', '``', $field) . '`';
