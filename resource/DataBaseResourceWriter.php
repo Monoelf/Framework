@@ -12,6 +12,7 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
 {
     private string $resourceName = '';
     private array $accessibleFields = [];
+    private array $relationships = [];
 
     /**
      * @param DataBaseConnectionInterface $connection
@@ -31,6 +32,13 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
         return $this;
     }
 
+    public function setRelationships(array $relationships): static
+    {
+        $this->relationships = $relationships;
+
+        return $this;
+    }
+
     /**
      * @param array $values
      * @return int
@@ -38,6 +46,55 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
     public function create(array $values): int
     {
         return $this->connection->insert($this->resourceName, $values);
+    }
+
+    public function createRelated(array $relationships): void
+    {
+        $this->validateRelationshipRules();
+
+        foreach ($relationships as $relationName => $params) {
+            $relationRules = $this->relationships[$relationName]
+                ?? throw new InvalidArgumentException("Связь {$relationName} с не задана");
+
+            if (isset($relationRules['otherRelationshipKey']) === true) {
+                [$originKey, $targetKey] = $this->getRelationKeys($relationRules['otherRelationshipKey']);
+                $values[$targetKey] = $params['data'][$originKey];
+            }
+
+            [, $targetKey] = $this->getRelationKeys($relationRules['relationshipKey']);
+            $values[$targetKey] = $this->connection->getLastInsertId();
+
+            $this->connection->insert($relationRules['table'], $values);
+        }
+    }
+
+    private function validateRelationshipRules(): void
+    {
+        foreach ($this->relationships as $relationName => $params) {
+            if (isset($params['table']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задана таблица (table)");
+            }
+
+            if (isset($params['relationshipKey']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи (relationshipKey)");
+            }
+
+            if (isset($params['otherRelationshipKey']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задано правило второй связи (otherRelationshipKey)");
+            }
+        }
+    }
+
+    private function getRelationKeys(array|string $relationKey): array
+    {
+        if (is_string($relationKey) === true) {
+            $relationKey = ['id' => $relationKey];
+        }
+
+        $originKey = array_key_first($relationKey);
+        $targetKey = $relationKey[$originKey];
+
+        return [$originKey, $targetKey];
     }
 
     /**

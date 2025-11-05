@@ -34,7 +34,7 @@ final readonly class FormRequestFactory implements FormRequestFactoryInterface
             $form->addRule($rule[0], $rule[1]);
         }
 
-        $data = $this->request->getParsedBody();
+        $data = $this->request->getParsedBody()['attributes'] ?? [];
 
         foreach ($form->getFields() as $fieldName) {
             if (isset($data[$fieldName]) === false) {

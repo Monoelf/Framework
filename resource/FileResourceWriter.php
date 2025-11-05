@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\resource;
 
+use BadMethodCallException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
@@ -99,5 +100,15 @@ final class FileResourceWriter implements ResourceWriterInterface
                 throw new \InvalidArgumentException("Поле '{$fieldName}' недоступно для записи");
             }
         }
+    }
+
+    public function setRelationships(array $relationships): static
+    {
+        throw new BadMethodCallException('Связи не реализуются для файлов');
+    }
+
+    public function createRelated(array $relationships): void
+    {
+        throw new BadMethodCallException('Связи не реализуются для файлов');
     }
 }

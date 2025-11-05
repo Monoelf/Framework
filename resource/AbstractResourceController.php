@@ -29,11 +29,13 @@ abstract class AbstractResourceController
         $this->resourceDataFilter
             ->setResourceName($this->getResourceName())
             ->setAccessibleFields($this->getAccessibleFields())
-            ->setAccessibleFilters($this->getAccessibleFilters());
+            ->setAccessibleFilters($this->getAccessibleFilters())
+            ->setRelationships($this->getRelationships());
 
         $this->resourceWriter
             ->setResourceName($this->getResourceName())
-            ->setAccessibleFields($this->getAccessibleFields());
+            ->setAccessibleFields($this->getAccessibleFields())
+            ->setRelationships($this->getRelationships());
     }
 
     protected function getForms(): array
@@ -58,6 +60,11 @@ abstract class AbstractResourceController
     }
 
     protected function getFieldRules(): array
+    {
+        return [];
+    }
+
+    protected function getRelationships(): array
     {
         return [];
     }
@@ -144,10 +151,10 @@ abstract class AbstractResourceController
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::VIEW);
 
-        $data = $this->resourceDataFilter->filterOne([
-            'fields' => $this->request->getQueryParams()['fields'] ?? [],
-            'filter' => ['id' => ['$eq' => $id]]
-        ]);
+        $conditions = $this->request->getQueryParams();
+        $conditions['filter'] = ['id' => ['$eq' => $id]];
+
+        $data = $this->resourceDataFilter->filterOne($conditions);
 
         return new JsonResponse($data);
     }
@@ -170,6 +177,10 @@ abstract class AbstractResourceController
 
         try {
             $this->resourceWriter->create($form->getValues());
+
+            if (isset($this->request->getParsedBody()['relationships']) === true) {
+                $this->resourceWriter->createRelated($this->request->getParsedBody()['relationships']);
+            }
         } catch (InvalidArgumentException $exception) {
             throw new HttpBadRequestException($exception->getMessage());
         }

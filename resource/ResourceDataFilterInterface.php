@@ -12,6 +12,8 @@ interface ResourceDataFilterInterface
 
     public function setAccessibleFilters(array $filterNames): static;
 
+    public function setRelationships(array $relationships): static;
+
     /**
      * Возврат коллекции ресурсов, отфильтрованных в соответствии с условиями
      *

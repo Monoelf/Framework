@@ -100,4 +100,16 @@ final class FileQueryBuilder implements FileQueryBuilderInterface
 
         return $this;
     }
+
+    public function reset(): static
+    {
+        $this->resource = null;
+        $this->selectFields = [];
+        $this->whereClause = [];
+        $this->orderByClause = [];
+        $this->limit = null;
+        $this->offset = null;
+
+        return $this;
+    }
 }

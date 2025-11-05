@@ -9,23 +9,19 @@ use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\query\mySQL\DataBaseQueryBuilderInterface;
 use Monoelf\Framework\resource\query\OperatorsEnum;
 use Monoelf\Framework\resource\ResourceDataFilterInterface;
-use RuntimeException;
 
 final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
 {
     private string $resourceName;
     private array $accessibleFields = [];
     private array $accessibleFilters = [];
+    private array $relationships = [];
 
     public function __construct(
         private readonly DataBaseConnectionInterface $connection,
         private readonly DataBaseQueryBuilderInterface $queryBuilder
     ) {}
 
-    /**
-     * @param string $name
-     * @return $this
-     */
     public function setResourceName(string $name): static
     {
         $this->resourceName = $name;
@@ -33,10 +29,6 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         return $this;
     }
 
-    /**
-     * @param array $fieldNames
-     * @return $this
-     */
     public function setAccessibleFields(array $fieldNames): static
     {
         $this->accessibleFields = $fieldNames;
@@ -44,10 +36,6 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         return $this;
     }
 
-    /**
-     * @param array $filterNames
-     * @return $this
-     */
     public function setAccessibleFilters(array $filterNames): static
     {
         $this->accessibleFilters = $filterNames;
@@ -55,131 +43,128 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         return $this;
     }
 
-    /**
-     * @param array $condition
-     * @return array
-     */
+    public function setRelationships(array $relationships): static
+    {
+        $this->relationships = $relationships;
+
+        return $this;
+    }
+
     public function filterAll(array $condition): array
     {
-        [$fields, $filters] = $this->extractConditionParts($condition);
-        $this->validateFilters(array_keys($filters));
+        $this->prepareQuery($condition);
 
-        $query = $this->queryBuilder
-            ->select($this->resolveSelectFields($fields))
-            ->from($this->resourceName)
-            ->where($this->buildFilterConditions($filters));
+        $rows = $this->connection->select($this->queryBuilder);
 
-        return $this->connection->select($query);
+        return $this->mapRelationshipsOnAll($rows, $condition['expand'] ?? []);
     }
 
     public function filterOne(array $condition): array|null
     {
-        [$fields, $filters] = $this->extractConditionParts($condition);
-        $this->validateFilters(array_keys($filters));
+        $this->prepareQuery($condition);
 
-        $query = $this->queryBuilder
-            ->select($this->resolveSelectFields($fields))
-            ->from($this->resourceName)
-            ->where($this->buildFilterConditions($filters));
+        $row = $this->connection->selectOne($this->queryBuilder);
 
-        return $this->connection->selectOne($query);
+        return $row !== null
+            ? $this->mapRelationshipsOnOne($row, $condition['expand'] ?? [])
+            : null;
     }
 
-    /**
-     * @param array $condition
-     * @return array
-     */
+    private function mapRelationshipsOnAll(array $data, array $relationships): array
+    {
+        $result = [];
+
+        foreach ($data as $item) {
+            $result[] = $this->mapRelationshipsOnOne($item, $relationships);
+        }
+
+        return $result;
+    }
+
+    private function mapRelationshipsOnOne(array $item, array $relationships): array
+    {
+        $result = [];
+
+        foreach ($item as $fieldName => $value) {
+            if (str_contains($fieldName, '.') === false) {
+                $result[$fieldName] = $value;
+
+                continue;
+            }
+
+            [$relation, $key] = explode('.', $fieldName);
+
+            if (in_array($relation, $relationships, true) === true) {
+                $result['relationships'][$relation][$key] = $value;
+            }
+        }
+
+        return $result;
+    }
+
     private function extractConditionParts(array $condition): array
     {
         $fields = $condition['fields'] ?? [];
         $filters = $condition['filter'] ?? [];
+        $relationships = $condition['expand'] ?? [];
 
-        if (is_array($fields) === false || is_array($filters) === false) {
-            throw new InvalidArgumentException('Поля и фильтры должны быть массивами');
+        if (is_array($fields) === false || is_array($filters) === false || is_array($relationships) === false) {
+            throw new InvalidArgumentException('Поля, фильтры и связи должны быть массивами');
         }
+
+        $this->validateFields($fields);
+        $this->validateFilters(array_keys($filters));
+        $this->validateRelationships($relationships);
 
         if (empty($fields) === true) {
             $fields = $this->accessibleFields;
         }
 
-        return [$fields, $filters];
+        return [$fields, $filters, $relationships];
     }
 
-    /**
-     * @param array $filters
-     * @return array
-     */
-    private function buildFilterConditions(array $filters): array
+    private function prepareJoins(array $joins): void
     {
-        $conditions = [];
+        foreach ($joins as $relatedResource) {
+            $relationRules = $this->relationships[$relatedResource];
 
-        foreach ($filters as $field => $operators) {
-            if (is_array($operators) === false) {
-                $conditions[] = [
-                    'field' => $field,
-                    'operator' => '=',
-                    'value' => $operators,
-                ];
-
-                continue;
+            if (isset($relationRules['otherRelationshipKey']) === true) {
+                $this->queryBuilder->join('LEFT', $relatedResource, $this->buildJoinCondition(
+                    $relatedResource,
+                    $relationRules['table'],
+                    $relationRules['otherRelationshipKey']
+                ));
             }
 
-            foreach ($operators as $operator => $value) {
-                $conditions = $this->appendOperatorCondition($conditions, $field, $operator, $value);
-            }
+            $this->queryBuilder->join('LEFT', $relationRules['table'], $this->buildJoinCondition(
+                $this->resourceName,
+                $relationRules['table'],
+                $relationRules['relationshipKey']
+            ));
+        }
+    }
+
+    private function buildJoinCondition(string $originTable, string $targetTable, array|string $key): string
+    {
+        if (is_string($key) === true) {
+            $key = ['id' => $key];
         }
 
-        return $conditions;
+        $originKey = array_key_first($key);
+        $targetKey = $key[$originKey];
+
+        return $originTable . '.' . $originKey . ' = ' . $targetTable . '.' . $targetKey;
     }
 
-    /**
-     * @param array $conditions
-     * @param string $field
-     * @param string $operator
-     * @param mixed $value
-     * @return array
-     */
-    private function appendOperatorCondition(array $conditions, string $field, string $operator, mixed $value): array
-    {
-        $conditions[] = [
-            'field' => $field,
-            'operator' => match ($operator) {
-                OperatorsEnum::EQ->value => '=',
-                OperatorsEnum::NE->value => '!=',
-                OperatorsEnum::GT->value => '>',
-                OperatorsEnum::LT->value => '<',
-                OperatorsEnum::GTE->value => '>=',
-                OperatorsEnum::LTE->value => '<=',
-                OperatorsEnum::LIKE->value => 'LIKE',
-                OperatorsEnum::IN->value => 'IN',
-                OperatorsEnum::NIN->value => 'NOT IN',
-                default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
-            },
-            'value' => $value
-        ];
-
-        return $conditions;
-    }
-
-    /**
-     * @param array $fields
-     * @return array|string[]
-     */
-    private function resolveSelectFields(array $fields): array
+    private function validateFields(array $fields): void
     {
         foreach ($fields as $field) {
             if (in_array($field, $this->accessibleFields, true) === false) {
                 throw new InvalidArgumentException("Доступ к полю '{$field}' запрещён");
             }
         }
-
-        return $fields;
     }
 
-    /**
-     * @param array $fields
-     * @return void
-     */
     private function validateFilters(array $fields): void
     {
         foreach ($fields as $field) {
@@ -187,5 +172,27 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
                 throw new InvalidArgumentException("Фильтрация по полю '{$field}' недопустима");
             }
         }
+    }
+
+    private function validateRelationships(array $relationships): void
+    {
+        foreach ($relationships as $relationship) {
+            if (array_key_exists($relationship, $this->relationships) === false) {
+                throw new InvalidArgumentException("Связь с ресурсом {$relationship} не задана");
+            }
+        }
+    }
+
+    private function prepareQuery(array $conditions): void
+    {
+        [$fields, $filters, $relationships] = $this->extractConditionParts($conditions);
+
+        $this->queryBuilder
+            ->reset()
+            ->select($fields)
+            ->from($this->resourceName)
+            ->where($filters);
+
+        $this->prepareJoins($relationships);
     }
 }
