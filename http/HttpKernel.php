@@ -39,15 +39,16 @@ final class HttpKernel implements HttpKernelInterface
 
             $message = null;
             $statusCode = StatusCodeEnum::STATUS_OK->value;
-            $responseContentType = 'text/html; charset=utf-8';
+            $responseContentType = null;
 
             if ($result instanceof BaseControllerResponse === true) {
                 $statusCode = $result->statusCode;
+                $responseContentType = $result->contentType;
                 $result = $result->responseBody;
             }
 
             if (is_array($result) === true) {
-                $responseContentType = 'application/json';
+                $responseContentType = $responseContentType ?? 'application/json';
                 $message = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
 
@@ -62,7 +63,7 @@ final class HttpKernel implements HttpKernelInterface
 
             $response = $this->container->get(ServerResponseInterface::class)
                 ->withStatus($statusCode)
-                ->withHeader('Content-Type', $responseContentType);
+                ->withHeader('Content-Type', $responseContentType ?? 'text/html; charset=utf-8');
 
             $response->getBody()->write($message ?? (string)$result);
         } catch (HttpException $e) {

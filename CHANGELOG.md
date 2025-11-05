@@ -3,6 +3,16 @@
 Формат основан на [стандарте формата CHANGELOG](https://keepachangelog.com/en/1.0.0/),
 и придерживается [правил версионирования](https://semver.org/spec/v2.0.0.html).
 
+## [ [0.6.0](https://github.com/Monoelf/Framework/tree/0.6.0) ] - 05.11.2025
+- Реализовано:
+    - В BaseControllerResponse можно установить ContentType
+    - Функционал запроса связанных ресурсов
+    - Функционал сохранения связи между двумя ресурсами через таблицу связей
+- Исправлено:
+    - JsonResponse при null вернет пустое тело. Ранее возвращал \[null\]
+- Изменено:
+    - Вынесено построение запроса из DataBaseResourceDataFilter в DataBaseQueryBuilder
+
 ## [ [0.5.0](https://github.com/Monoelf/Framework/tree/0.5.0) ] - 01.11.2025
 - Реализовано:
     - JsonDataBaseConnection класс для работы с json файлами
