@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Monoelf\Framework\http\dto;
+namespace Monoelf\Framework\http\response;
 
-use Monoelf\Framework\http\dto\BaseControllerResponse;
+use Monoelf\Framework\http\response\Response;
 
-class JsonResponse extends BaseControllerResponse
+class JsonResponse extends Response
 {
     public function __construct(mixed $data = null, int $status = 200)
     {
@@ -16,7 +16,7 @@ class JsonResponse extends BaseControllerResponse
 
         parent::__construct(
             $status,
-            $data,
+            json_encode($data),
             'application/json'
         );
     }

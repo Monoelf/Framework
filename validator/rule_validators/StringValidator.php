@@ -22,11 +22,11 @@ final class StringValidator implements RuleValidatorInterface
         $pattern = $options['pattern'] ?? null;
 
         if ($min !== null && $len < $min) {
-            throw new ValidationException('Значение должно быть не короче минимальной длины: ' . $min);
+            throw new ValidationException($options['minErrorMessage'] ?? "Значение должно быть не короче минимальной длины: $min");
         }
 
         if ($max !== null && $len > $max) {
-            throw new ValidationException('Значение должно быть не длиннее максимальной длины: ' . $max);
+            throw new ValidationException($options['maxErrorMessage'] ?? "Значение должно быть не длиннее максимальной длины: $max");
         }
 
         if ($pattern !== null) {
@@ -37,7 +37,7 @@ final class StringValidator implements RuleValidatorInterface
             }
 
             if ($pregResult === 0) {
-                throw new ValidationException('Значение не соответсвует паттерну');
+                throw new ValidationException($options['patternErrorMessage'] ?? 'Значение не соответсвует паттерну');
             }
         }
     }

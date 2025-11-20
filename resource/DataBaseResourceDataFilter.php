@@ -128,18 +128,18 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         foreach ($joins as $relatedResource) {
             $relationRules = $this->relationships[$relatedResource];
 
-            if (isset($relationRules['otherRelationshipKey']) === true) {
+            if (isset($relationRules['viaKey']) === true) {
                 $this->queryBuilder->join('LEFT', $relatedResource, $this->buildJoinCondition(
                     $relatedResource,
                     $relationRules['table'],
-                    $relationRules['otherRelationshipKey']
+                    $relationRules['viaKey']
                 ));
             }
 
             $this->queryBuilder->join('LEFT', $relationRules['table'], $this->buildJoinCondition(
                 $this->resourceName,
                 $relationRules['table'],
-                $relationRules['relationshipKey']
+                $relationRules['key']
             ));
         }
     }

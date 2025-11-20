@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource;
 
 use InvalidArgumentException;
-use Monoelf\Framework\http\dto\CreateResponse;
-use Monoelf\Framework\http\dto\DeleteResponse;
-use Monoelf\Framework\http\dto\JsonResponse;
-use Monoelf\Framework\http\dto\PatchResponse;
-use Monoelf\Framework\http\dto\UpdateResponse;
+use Monoelf\Framework\http\response\CreateResponse;
+use Monoelf\Framework\http\response\DeleteResponse;
+use Monoelf\Framework\http\response\JsonResponse;
+use Monoelf\Framework\http\response\PatchResponse;
+use Monoelf\Framework\http\response\UpdateResponse;
 use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\http\exceptions\HttpForbiddenException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
