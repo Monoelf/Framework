@@ -5,12 +5,16 @@ declare(strict_types=1);
 namespace Monoelf\Framework\validator;
 
 use Monoelf\Framework\container\ContainerInterface;
-use Monoelf\Framework\resource\form_request\FormRequestInterface;
+use Monoelf\Framework\container\DependencyNotFoundException;
 use Monoelf\Framework\validator\rule_validators\BooleanValidator;
+use Monoelf\Framework\validator\rule_validators\DateValidator;
+use Monoelf\Framework\validator\rule_validators\EmailValidator;
+use Monoelf\Framework\validator\rule_validators\ExistsValidator;
 use Monoelf\Framework\validator\rule_validators\IntegerValidator;
 use Monoelf\Framework\validator\rule_validators\RequiredValidator;
 use Monoelf\Framework\validator\rule_validators\SafeValidator;
 use Monoelf\Framework\validator\rule_validators\StringValidator;
+use Monoelf\Framework\validator\rule_validators\UniqueValidator;
 
 final class Validator
 {
@@ -22,6 +26,10 @@ final class Validator
         'string' => StringValidator::class,
         'required' => RequiredValidator::class,
         'safe' => SafeValidator::class,
+        'date' => DateValidator::class,
+        'email' => EmailValidator::class,
+        'unique' => UniqueValidator::class,
+        'exists' => ExistsValidator::class,
     ];
 
     private array $validators;
@@ -70,28 +78,5 @@ final class Validator
         }
 
         $this->container->get($this->validators[$ruleName])->validate($value, $options);
-    }
-
-    public function validateForm(
-        FormRequestInterface $formRequest,
-        string|array $rule,
-        array $attributes = []
-    ): void {
-        $formValidator = $rule;
-        $ruleOptions = [];
-
-        if (is_array($rule) === true) {
-            $formValidator = $rule[0];
-            $ruleOptions = array_slice($rule, 1, null, true);
-        }
-
-        $formValidator = $this->container->build($formValidator, [
-            'options' => [
-                'attributes' => $attributes,
-                'ruleOptions' => $ruleOptions,
-            ]
-        ]);
-        /* @var FormValidatorInterface $formValidator */
-        $formValidator->validate($formRequest);
     }
 }
