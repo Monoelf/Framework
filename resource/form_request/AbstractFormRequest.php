@@ -73,7 +73,7 @@ abstract class AbstractFormRequest implements FormRequestInterface
             try {
                 $this->validator->validate($value, $rule);
             } catch (ValidationException $e) {
-                $this->addError($attribute, $e->getMessage());
+                $this->addAttributesError($attribute, $e->getMessage());
             }
         }
     }
@@ -96,6 +96,19 @@ abstract class AbstractFormRequest implements FormRequestInterface
     public function addError(string $attribute, string $message): void
     {
         $this->errors[$attribute][] = $message;
+    }
+
+    private function addAttributesError(array|string $attributes, string $rule): void
+    {
+        if (is_string($attributes) === true) {
+            $this->addError($attributes, $rule);
+
+            return;
+        }
+
+        foreach ($attributes as $attribute) {
+            $this->addError($attribute, $rule);
+        }
     }
 
     public function getErrors(): array
@@ -131,7 +144,7 @@ abstract class AbstractFormRequest implements FormRequestInterface
 
     public function getFields(): array
     {
-        return array_unique(array_merge(...array_column($this->getRules(), 0)));
+        return array_unique(array_filter(array_merge(...array_column($this->getRules(), 0)), 'is_string'));
     }
 
     protected function getRules(): array

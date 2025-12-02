@@ -37,7 +37,7 @@ final class HttpKernel implements HttpKernelInterface
         try {
             $result = $this->router->dispatch($request);
 
-            $message = null;
+            $message = $result;
             $statusCode = StatusCodeEnum::STATUS_OK->value;
             $responseContentType = 'text/html; charset=utf-8';
 
@@ -65,7 +65,7 @@ final class HttpKernel implements HttpKernelInterface
                 ->withStatus($statusCode)
                 ->withHeader('Content-Type', $responseContentType);
 
-            $response->getBody()->write($message ?? (string)$result);
+            $response->getBody()->write((string)$message);
         } catch (HttpException $e) {
             $this->logger->error($e);
 

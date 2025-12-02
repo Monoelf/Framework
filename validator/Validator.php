@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Monoelf\Framework\validator;
 
 use Monoelf\Framework\container\ContainerInterface;
-use Monoelf\Framework\container\DependencyNotFoundException;
 use Monoelf\Framework\validator\rule_validators\BooleanValidator;
 use Monoelf\Framework\validator\rule_validators\DateValidator;
 use Monoelf\Framework\validator\rule_validators\EmailValidator;

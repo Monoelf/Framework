@@ -28,10 +28,11 @@ final class UniqueValidator implements RuleValidatorInterface
 
         $this->queryBuilder
             ->reset()
+            ->select('*')
             ->from($options['resource'])
             ->where(array_combine($options['target'], $value));
 
-        if (is_null($this->connection->selectOne($this->queryBuilder)) === true) {
+        if (is_null($this->connection->selectOne($this->queryBuilder)) === false) {
             throw new ValidationException(
                 'Значение [' . implode(', ', $value) . '] для ['
                 . implode(', ', $options['target']) . '] уже существует в ' . $options['resource']
