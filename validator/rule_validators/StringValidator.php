@@ -13,7 +13,7 @@ final class StringValidator implements RuleValidatorInterface
     public function validate(mixed $value, array $options = []): void
     {
         if (is_string($value) === false) {
-            throw new ValidationException('Значение должно быть строкой');
+            throw new ValidationException($options['errorMessage'] ?? 'Значение должно быть строкой');
         }
 
         $len = mb_strlen($value);
@@ -29,16 +29,18 @@ final class StringValidator implements RuleValidatorInterface
             throw new ValidationException($options['maxErrorMessage'] ?? "Значение должно быть не длиннее максимальной длины: $max");
         }
 
-        if ($pattern !== null) {
-            $pregResult = preg_match($pattern, $value);
+        if (is_null($pattern) === true) {
+            return;
+        }
 
-            if ($pregResult === false) {
-                throw new InvalidArgumentException('Некорректно задано правило паттерна');
-            }
+        $pregResult = preg_match($pattern, $value);
 
-            if ($pregResult === 0) {
-                throw new ValidationException($options['patternErrorMessage'] ?? 'Значение не соответсвует паттерну');
-            }
+        if ($pregResult === false) {
+            throw new InvalidArgumentException('Некорректно задано правило паттерна');
+        }
+
+        if ($pregResult === 0) {
+            throw new ValidationException($options['patternErrorMessage'] ?? 'Значение не соответсвует паттерну');
         }
     }
 }

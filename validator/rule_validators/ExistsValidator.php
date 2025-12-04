@@ -25,10 +25,11 @@ final class ExistsValidator implements RuleValidatorInterface
             ->where([$options['target'] => $value]);
 
         if (is_null($this->connection->selectOne($this->queryBuilder)) === true) {
-            throw new ValidationException(
-                'Не найдено значение [' . $value
-                . '] для [' . $options['target'] . '] в ' . $options['resource']
-            );
+            $message = $options['errorMessage']
+                ?? 'Не найдено значение [' . $value
+                    . '] для [' . $options['target'] . '] в ' . $options['resource'];
+
+            throw new ValidationException($message);
         }
     }
 }

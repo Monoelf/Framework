@@ -18,7 +18,7 @@ final class DateValidator implements RuleValidatorInterface
                 DateTime::createFromFormat($options['format'], $value) === false
                 || DateTime::getLastErrors() !== false
             ) {
-                throw new ValidationException('Значение должно быть датой в формате ' . $options['format']);
+                throw new ValidationException($options['errorMessage'] ?? "Значение должно быть датой в формате {$options['format']}");
             }
 
             return;
@@ -27,7 +27,7 @@ final class DateValidator implements RuleValidatorInterface
         try {
             new DateTime($value);
         } catch (DateMalformedStringException) {
-            throw new ValidationException('Значение должно быть датой');
+            throw new ValidationException($options['errorMessage'] ?? 'Значение должно быть датой');
         }
     }
 }

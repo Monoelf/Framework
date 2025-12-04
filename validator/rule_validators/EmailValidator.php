@@ -12,7 +12,7 @@ final class EmailValidator implements RuleValidatorInterface
     public function validate(mixed $value, array $options = []): void
     {
         if (filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
-            throw new ValidationException('Значение должно быть корректным email адресом');
+            throw new ValidationException($options['errorMessage'] ?? 'Значение должно быть корректным email адресом');
         }
     }
 }

@@ -12,7 +12,7 @@ final class RequiredValidator implements RuleValidatorInterface
     public function validate(mixed $value, array $options = []): void
     {
         if (is_null($value) === true || $value === '' || $value === []) {
-            throw new ValidationException('Значение обязательно для заполнения');
+            throw new ValidationException($options['errorMessage'] ?? 'Значение обязательно для заполнения');
         }
     }
 }

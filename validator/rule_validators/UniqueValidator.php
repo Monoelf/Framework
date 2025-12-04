@@ -33,10 +33,11 @@ final class UniqueValidator implements RuleValidatorInterface
             ->where(array_combine($options['target'], $value));
 
         if (is_null($this->connection->selectOne($this->queryBuilder)) === false) {
-            throw new ValidationException(
-                'Значение [' . implode(', ', $value) . '] для ['
-                . implode(', ', $options['target']) . '] уже существует в ' . $options['resource']
-            );
+            $message = $options['errorMessage']
+                ?? 'Значение [' . implode(', ', $value) . '] для [' . implode(', ', $options['target'])
+                    . '] уже существует в ' . $options['resource'];
+
+            throw new ValidationException($message);
         }
     }
 }
