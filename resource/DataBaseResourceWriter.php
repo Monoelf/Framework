@@ -56,12 +56,12 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
             $relationRules = $this->relationships[$relationName]
                 ?? throw new InvalidArgumentException("Связь {$relationName} с не задана");
 
-            if (isset($relationRules['otherRelationshipKey']) === true) {
-                [$originKey, $targetKey] = $this->getRelationKeys($relationRules['otherRelationshipKey']);
+            if (isset($relationRules['viaKey']) === true) {
+                [$originKey, $targetKey] = $this->getRelationKeys($relationRules['viaKey']);
                 $values[$targetKey] = $params['data'][$originKey];
             }
 
-            [, $targetKey] = $this->getRelationKeys($relationRules['relationshipKey']);
+            [, $targetKey] = $this->getRelationKeys($relationRules['key']);
             $values[$targetKey] = $this->connection->getLastInsertId();
 
             $this->connection->insert($relationRules['table'], $values);
@@ -75,12 +75,12 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
                 throw new InvalidArgumentException("Для связи {$relationName} не задана таблица (table)");
             }
 
-            if (isset($params['relationshipKey']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи (relationshipKey)");
+            if (isset($params['key']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи ресурса с таблицей (key)");
             }
 
-            if (isset($params['otherRelationshipKey']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задано правило второй связи (otherRelationshipKey)");
+            if (isset($params['viaKey']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи связанного ресурса с таблице (viaKey)");
             }
         }
     }
