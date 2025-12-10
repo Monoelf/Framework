@@ -26,7 +26,8 @@
         "psr/http-message": "^2.0",
         "psr/container": "^2.0",
         "ext-posix": "*",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "firebase/php-jwt": "*"
     },
     "scripts": {
         "test": "phpunit"
