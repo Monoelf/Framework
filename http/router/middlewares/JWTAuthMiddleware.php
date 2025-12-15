@@ -21,14 +21,16 @@ final readonly class JWTAuthMiddleware implements MiddlewareInterface
         $authHeader = $request->getHeaderLine('Authorization');
 
         if (empty($authHeader) === true || stripos($authHeader, 'Bearer ') !== 0) {
-            throw new HttpUnauthorizedException('Доступ запрещен! Авторизация не пройдена');
+            throw new HttpUnauthorizedException();
         }
 
         try {
-            $this->decoder->decode(substr($authHeader, 7));
+            $decoded = $this->decoder->decode(substr($authHeader, 7));
         } catch (SignatureInvalidException|ExpiredException) {
-            throw new HttpUnauthorizedException('Доступ запрещен! Токен скомпроментирован или просрочен');
+            throw new HttpUnauthorizedException();
         }
+
+        $request = $request->withAttribute('subject', $decoded['sub']);
 
         $next($request, $response);
     }
