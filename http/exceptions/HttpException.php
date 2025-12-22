@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\exceptions;
 
-class HttpException extends \Exception
+use Monoelf\Framework\common\exceptions\BaseException;
+
+class HttpException extends BaseException
 {
-    public function __construct(private readonly int $statusCode, string $message)
+    public function __construct(private readonly int $statusCode, mixed $message)
     {
         parent::__construct($message);
     }
