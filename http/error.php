@@ -1,17 +1,15 @@
 <?php
 
 /**
- * @var Throwable $exception
+ * @var string $message
+ * @var string $trace
+ * @var string $type
+ * @var int $statusCode
  * @var string $xDebugTag
  * @var boolean $showTrace
  */
 
-use Monoelf\Framework\http\exceptions\HttpException;
-
 ini_set('xdebug.overdump', 1222222);
-
-$statusCode = $exception instanceof HttpException ? $exception->getStatusCode() : 500;
-$trace = str_replace(["\n", ": "], ["\n\n", ":\n"], $exception->getTraceAsString());
 
 ?>
 
@@ -55,7 +53,7 @@ $trace = str_replace(["\n", ": "], ["\n\n", ":\n"], $exception->getTraceAsString
     <p>
         Запрос не может быть обработан<br>
         Ошибка: <strong><?= htmlspecialchars($statusCode) ?></strong><br>
-        <?= htmlspecialchars($exception->getMessage()) ?><br><br>
+        <?= htmlspecialchars($message) ?><br><br>
         Идентификатор сеанса: <?= htmlspecialchars($xDebugTag) ?>
     </p>
     <?php endif; ?>
@@ -77,7 +75,7 @@ $trace = str_replace(["\n", ": "], ["\n\n", ":\n"], $exception->getTraceAsString
 <?php if ($showTrace === true): ?>
     <h2>Трейс вызова</h2>
     <div class="error-container">
-        <h3><?= $exception::class . ': ' . $exception->getMessage() ?></h3>
+        <h3><?= $type . ': ' . $message ?></h3>
         <pre><?= $trace ?></pre>
     </div>
 <?php endif; ?>
