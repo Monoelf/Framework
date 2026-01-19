@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource;
 
 use InvalidArgumentException;
+use Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
+use Monoelf\Framework\event_dispatcher\Message;
 use Monoelf\Framework\http\response\CreateResponse;
 use Monoelf\Framework\http\response\DeleteResponse;
 use Monoelf\Framework\http\response\JsonResponse;
@@ -25,6 +27,7 @@ abstract class AbstractResourceController
         protected ServerRequestInterface $request,
         protected FormRequestFactoryInterface $formRequestFactory,
         protected ResourceWriterInterface $resourceWriter,
+        protected EventDispatcherInterface $eventDispatcher,
     ) {
         $this->resourceDataFilter
             ->setResourceName($this->getResourceName())
@@ -176,16 +179,26 @@ abstract class AbstractResourceController
         }
 
         try {
-            $this->resourceWriter->create($form->getValues());
+            $hasRelations = isset($this->request->getParsedBody()['relationships']) === true;
 
-            if (isset($this->request->getParsedBody()['relationships']) === true) {
-                $this->resourceWriter->createRelated($this->request->getParsedBody()['relationships']);
+            if ($hasRelations === true) {
+                $createdId = $this->resourceWriter->createWithRelated($form->getValues(), $this->request->getParsedBody()['relationships']);
             }
+
+            if ($hasRelations === false) {
+                $createdId = $this->resourceWriter->create($form->getValues());
+            }
+
         } catch (InvalidArgumentException $exception) {
             throw new HttpBadRequestException($exception->getMessage());
         }
 
-        return new CreateResponse();
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_CREATED, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $createdId,
+        ]));
+
+        return new CreateResponse($createdId);
     }
 
     /**
