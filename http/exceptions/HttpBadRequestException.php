@@ -8,7 +8,7 @@ use Monoelf\Framework\http\StatusCodeEnum;
 
 final class HttpBadRequestException extends HttpException
 {
-    public function __construct(?string $message = null)
+    public function __construct(mixed $message = null)
     {
         parent::__construct(
             StatusCodeEnum::STATUS_BAD_REQUEST->value,

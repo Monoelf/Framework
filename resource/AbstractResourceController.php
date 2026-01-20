@@ -175,7 +175,7 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException($form->getErrors());
         }
 
         try {
@@ -215,7 +215,7 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException($form->getErrors());
         }
 
         try {
@@ -247,7 +247,7 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException($form->getErrors());
         }
 
         try {
