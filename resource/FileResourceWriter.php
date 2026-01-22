@@ -25,7 +25,7 @@ final class FileResourceWriter implements ResourceWriterInterface
         return $this;
     }
 
-    public function create(array $values): int
+    public function create(array $values): ?string
     {
         $this->validateSelfState();
 
@@ -107,7 +107,7 @@ final class FileResourceWriter implements ResourceWriterInterface
         throw new BadMethodCallException('Связи не реализуются для файлов');
     }
 
-    public function createRelated(array $relationships): void
+    public function createWithRelated(array $values, array $relationships): ?string
     {
         throw new BadMethodCallException('Связи не реализуются для файлов');
     }

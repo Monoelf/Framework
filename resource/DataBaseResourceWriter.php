@@ -7,6 +7,7 @@ namespace Monoelf\Framework\resource;
 use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
+use Throwable;
 
 final class DataBaseResourceWriter implements ResourceWriterInterface
 {
@@ -39,17 +40,32 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
         return $this;
     }
 
-    /**
-     * @param array $values
-     * @return int
-     */
-    public function create(array $values): int
+    public function create(array $values): ?string
     {
         return $this->connection->insert($this->resourceName, $values);
     }
 
-    public function createRelated(array $relationships): void
+    public function createWithRelated(array $values, array $relationships): ?string
     {
+        $this->connection->beginTransaction();
+
+        try {
+            $createdId = $this->createWithRelatedInternal($values, $relationships);
+        } catch (Throwable $e) {
+            $this->connection->rollBack();
+
+            throw $e;
+        }
+
+        $this->connection->commit();
+
+        return $createdId;
+    }
+
+    private function createWithRelatedInternal(array $values, array $relationships): ?string
+    {
+        $createdId = $this->create($values);
+
         $this->validateRelationshipRules();
 
         foreach ($relationships as $relationName => $params) {
@@ -62,10 +78,12 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
             }
 
             [, $targetKey] = $this->getRelationKeys($relationRules['key']);
-            $values[$targetKey] = $this->connection->getLastInsertId();
+            $values[$targetKey] = $createdId;
 
             $this->connection->insert($relationRules['table'], $values);
         }
+
+        return $createdId;
     }
 
     private function validateRelationshipRules(): void

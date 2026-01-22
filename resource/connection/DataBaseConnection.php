@@ -124,13 +124,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $statement->rowCount();
     }
 
-    /**
-     * @param string $resource
-     * @param array $data
-     * @return int
-     * @throws DuplicateEntryException
-     */
-    public function insert(string $resource, array $data): int
+    public function insert(string $resource, array $data): ?string
     {
         $columns = array_keys($data);
 
@@ -146,9 +140,7 @@ class DataBaseConnection implements DataBaseConnectionInterface
 
         $statement->execute($bindings);
 
-        $this->lastInsertId = $this->connection->lastInsertId();
-
-        return $statement->rowCount();
+        return $this->lastInsertId = $this->connection->lastInsertId();
     }
 
     /**
@@ -204,5 +196,20 @@ class DataBaseConnection implements DataBaseConnectionInterface
         $statement->execute($statementParams->bindings);
 
         return $statement;
+    }
+
+    public function beginTransaction(): void
+    {
+        $this->connection->beginTransaction();
+    }
+
+    public function commit(): void
+    {
+        $this->connection->commit();
+    }
+
+    public function rollBack(): void
+    {
+        $this->connection->rollBack();
     }
 }
