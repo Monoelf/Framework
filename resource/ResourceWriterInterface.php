@@ -12,9 +12,9 @@ interface ResourceWriterInterface
 
     public function setRelationships(array $relationships): static;
 
-    public function createRelated(array $relationships): void;
+    public function createWithRelated(array $values, array $relationships): ?string;
 
-    public function create(array $values): int;
+    public function create(array $values): ?string;
 
     public function update(string|int $id, array $values): int;
 

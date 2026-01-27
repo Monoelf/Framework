@@ -31,20 +31,6 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
-        if (is_callable($middleware) === true) {
-            $this->middlewares[] = $middleware(...);
-
-            return $this;
-        }
-
-        if (class_exists($middleware) === false) {
-            throw new \InvalidArgumentException("Не найден мидлвеер '{$middleware}'");
-        }
-
-        if (is_subclass_of($middleware, MiddlewareInterface::class) === false) {
-            throw new \InvalidArgumentException("Мидлвеер должен реализовывать MiddlewareInterface");
-        }
-
         $this->middlewares[] = $middleware;
 
         return $this;
@@ -79,10 +65,6 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
     {
         $group = new RouteGroup($name);
 
-        if ($this->groupStack !== []) {
-            $this->groupStack[array_key_last($this->groupStack)]->addGroup($group);
-        }
-
         $this->groupStack[] = $group;
 
         $set($this);
@@ -102,14 +84,11 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
             $regex,
             $this->resolveHandler($handler),
             $this->middlewares,
-            $this->prepareParams($path)
+            $this->prepareParams($path),
+            $this->groupStack,
         );
 
         $this->routes[$method][$fullPath] = $route;
-
-        if ($this->groupStack !== []) {
-            $this->groupStack[array_key_last($this->groupStack)]->addRoute($route);
-        }
 
         return $route;
     }
@@ -154,10 +133,20 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
             }
         }
 
+        $request = $request->withAttribute('pathParams', $pathParams);
+
         $params = $this->mapParams(array_merge($request->getQueryParams(), $pathParams), $route->params);
 
+        $middlewares = $this->middlewares;
+
+        foreach ($route->groupStack as $group) {
+            $middlewares = array_merge($middlewares, $group->getMiddlewares());
+        }
+
+        $middlewares = array_merge($middlewares, $route->middlewares);
+
         $middlewareChain = array_reduce(
-            array_reverse($route->middlewares),
+            array_reverse($middlewares),
             function (callable $next, string|callable $middleware): callable {
                 return function (ServerRequestInterface $request, ServerResponseInterface $response) use ($middleware, $next) {
                     $args = ['request' => $request, 'response' => $response, 'next' => $next];
@@ -178,11 +167,10 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
         return $this->container->call($route->handler[0], $route->handler[1], $params);
     }
 
-
     /**
      * Формирование массива параметров вызовов обработчика маршрута
      *
-     * @param string|callable $handler обработчик - коллбек функция
+     * @param callable|string|array $handler обработчик - коллбек функция
      * или неймспейс класса в формате 'Неймспейс::метод'
      * @return array
      * Пример для callable:
@@ -251,7 +239,6 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
         return $params;
     }
-
 
     /**
      * Получение значений параметров запроса определенных для маршрута
@@ -352,7 +339,6 @@ final class Router implements HTTPRouterInterface, MiddlewareAssignable
 
         return '#^' . $regex . '$#';
     }
-
 
     /**
      * @param string $name
