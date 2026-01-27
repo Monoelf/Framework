@@ -46,9 +46,9 @@ final class RedisClient
 
     public function pop(string $queue): ?string
     {
-        $data = $this->redis->blPop([$queue], 0);
+        $data = $this->redis->blPop($queue, 1);
 
-        if ($data === null) {
+        if (empty($data) === true) {
             return null;
         }
 
