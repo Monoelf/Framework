@@ -48,7 +48,6 @@ ini_set('xdebug.overdump', 1222222);
 <body>
 
 <div class="error-container">
-
     <?php if ($statusCode >= 400 && $statusCode < 500): ?>
     <p>
         Запрос не может быть обработан<br>

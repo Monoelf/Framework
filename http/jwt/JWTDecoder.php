@@ -13,7 +13,7 @@ final readonly class JWTDecoder
 
     public function __construct(string $publicKeyPath, string $algorithm = 'RS256')
     {
-        $this->key = new Key(file_get_contents($publicKeyPath), $algorithm);
+        $this->key = new Key(file_get_contents('../' . $publicKeyPath), $algorithm);
     }
 
     public function decode(string $token): array

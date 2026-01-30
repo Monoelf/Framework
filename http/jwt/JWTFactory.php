@@ -15,6 +15,6 @@ final readonly class JWTFactory
         $payload['iat'] = time();
         $payload['exp'] = $payload['iat'] + $expirationTime;
 
-        return JWT::encode($payload, file_get_contents($this->privateKeyPath), $alg);
+        return JWT::encode($payload, file_get_contents('../' . $this->privateKeyPath), $alg);
     }
 }
