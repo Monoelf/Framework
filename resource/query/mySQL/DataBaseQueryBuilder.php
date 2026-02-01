@@ -105,13 +105,19 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         $whereParts = [];
 
         foreach ($condition as $value) {
-            if (is_array($value) === true && isset($value['field'], $value['operator'], $value['value']) === true) {
-                $param = 'where_' . count($this->bindings);
-
+            if (
+                is_array($value) === true
+                && isset($value['field'], $value['operator'], $value['value'])
+            ) {
                 $field = $this->escapeField($value['field']);
 
-                $whereParts[] = "{$field} {$value['operator']} :$param";
+                if ($value['value'] === 'NULL') {
+                    $whereParts[] = "{$field} {$value['operator']} NULL";
+                    continue;
+                }
 
+                $param = 'where_' . count($this->bindings);
+                $whereParts[] = "{$field} {$value['operator']} :$param";
                 $this->bindings[$param] = $value['value'];
             }
         }
@@ -130,13 +136,22 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         foreach ($filters as $field => $operators) {
             $field = $this->buildFilterFieldName($field);
 
+            if ($operators === null) {
+                $conditions[] = $this->appendOperatorCondition(
+                    $field,
+                    OperatorsEnum::EQ->value,
+                    null
+                );
+                continue;
+            }
+
+
             if (is_array($operators) === false) {
                 $conditions[] = [
                     'field' => $field,
                     'operator' => '=',
                     'value' => $operators,
                 ];
-
                 continue;
             }
 
@@ -159,6 +174,22 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 
     private function appendOperatorCondition(string $field, string $operator, mixed $value): array
     {
+        if ($value === null) {
+            return match ($operator) {
+                OperatorsEnum::EQ->value => [
+                    'field' => $field,
+                    'operator' => 'IS',
+                    'value' => 'NULL',
+                ],
+                OperatorsEnum::NE->value => [
+                    'field' => $field,
+                    'operator' => 'IS NOT',
+                    'value' => 'NULL',
+                ],
+                default => throw new InvalidArgumentException("Оператор {$operator} не поддерживает NULL"),
+            };
+        }
+
         if ($operator === OperatorsEnum::LIKE->value) {
             $value = '%' . $value . '%';
         }

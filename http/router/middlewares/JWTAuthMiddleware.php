@@ -11,6 +11,7 @@ use Monoelf\Framework\http\ServerResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Firebase\JWT\SignatureInvalidException;
 use Firebase\JWT\ExpiredException;
+use UnexpectedValueException;
 
 final readonly class JWTAuthMiddleware implements MiddlewareInterface
 {
@@ -26,7 +27,7 @@ final readonly class JWTAuthMiddleware implements MiddlewareInterface
 
         try {
             $decoded = $this->decoder->decode(substr($authHeader, 7));
-        } catch (SignatureInvalidException|ExpiredException) {
+        } catch (SignatureInvalidException|ExpiredException|UnexpectedValueException) {
             throw new HttpUnauthorizedException();
         }
 
