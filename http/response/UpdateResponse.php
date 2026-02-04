@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\response;
 
-use Monoelf\Framework\http\response\Response;
+use Monoelf\Framework\http\response\JsonResponse;
 
-final class UpdateResponse extends Response
+final class UpdateResponse extends JsonResponse
 {
     public function __construct()
     {
-        parent::__construct(204);
+        parent::__construct(null, 204);
     }
 }

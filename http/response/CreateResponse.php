@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\http\response;
 
-use Monoelf\Framework\http\response\Response;
+use Monoelf\Framework\http\response\JsonResponse;
 
-final class CreateResponse extends Response
+final class CreateResponse extends JsonResponse
 {
     public function __construct(?string $body = null)
     {
-        parent::__construct(201, $body);
+        parent::__construct($body, 201);
     }
 }
