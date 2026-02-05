@@ -140,6 +140,10 @@ abstract class AbstractResourceController
 
         $data = $this->resourceDataFilter->filterAll($this->request->getQueryParams());
 
+        if (empty($data) === true) {
+            throw new HttpNotFoundException();
+        }
+
         return new JsonResponse($data);
     }
 
@@ -156,7 +160,7 @@ abstract class AbstractResourceController
      *
      * @param int $id
      * @return JsonResponse
-     * @throws HttpForbiddenException
+     * @throws HttpForbiddenException|HttpNotFoundException
      */
     public function actionView(int $id): JsonResponse
     {
@@ -172,6 +176,10 @@ abstract class AbstractResourceController
         ]));
 
         $data = $this->resourceDataFilter->filterOne($conditions);
+
+        if (empty($data) === true) {
+            throw new HttpNotFoundException();
+        }
 
         return new JsonResponse($data);
     }
