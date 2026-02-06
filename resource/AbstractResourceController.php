@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource;
 
 use InvalidArgumentException;
-use Monoelf\Framework\http\dto\CreateResponse;
-use Monoelf\Framework\http\dto\DeleteResponse;
-use Monoelf\Framework\http\dto\JsonResponse;
-use Monoelf\Framework\http\dto\PatchResponse;
-use Monoelf\Framework\http\dto\UpdateResponse;
+use Monoelf\Framework\event_dispatcher\EventDispatcherInterface;
+use Monoelf\Framework\event_dispatcher\Message;
+use Monoelf\Framework\http\response\CreateResponse;
+use Monoelf\Framework\http\response\DeleteResponse;
+use Monoelf\Framework\http\response\JsonResponse;
+use Monoelf\Framework\http\response\PatchResponse;
+use Monoelf\Framework\http\response\UpdateResponse;
 use Monoelf\Framework\http\exceptions\HttpBadRequestException;
 use Monoelf\Framework\http\exceptions\HttpForbiddenException;
 use Monoelf\Framework\http\exceptions\HttpNotFoundException;
@@ -25,6 +27,7 @@ abstract class AbstractResourceController
         protected ServerRequestInterface $request,
         protected FormRequestFactoryInterface $formRequestFactory,
         protected ResourceWriterInterface $resourceWriter,
+        protected EventDispatcherInterface $eventDispatcher,
     ) {
         $this->resourceDataFilter
             ->setResourceName($this->getResourceName())
@@ -127,6 +130,14 @@ abstract class AbstractResourceController
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::INDEX);
 
+        $conditions = $this->request->getQueryParams();
+
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_LIST_REQUEST, new Message([
+            'resource' => $this->getResourceName(),
+            'filters' => $conditions['filter'] ?? null,
+            'fields' => $conditions['fields'] ?? $this->getAccessibleFields(),
+        ]));
+
         $data = $this->resourceDataFilter->filterAll($this->request->getQueryParams());
 
         return new JsonResponse($data);
@@ -154,6 +165,12 @@ abstract class AbstractResourceController
         $conditions = $this->request->getQueryParams();
         $conditions['filter'] = ['id' => ['$eq' => $id]];
 
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_VIEW_REQUEST, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+            'fields' => $conditions['fields'] ?? $this->getAccessibleFields(),
+        ]));
+
         $data = $this->resourceDataFilter->filterOne($conditions);
 
         return new JsonResponse($data);
@@ -172,20 +189,35 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException($form->getErrors());
         }
 
-        try {
-            $this->resourceWriter->create($form->getValues());
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_BEFORE_CREATE, new Message([
+            'resource' => $this->getResourceName(),
+            'values' => $form->getValues(),
+        ]));
 
-            if (isset($this->request->getParsedBody()['relationships']) === true) {
-                $this->resourceWriter->createRelated($this->request->getParsedBody()['relationships']);
+        try {
+            $hasRelations = isset($this->request->getParsedBody()['relationships']) === true;
+
+            if ($hasRelations === true) {
+                $createdId = $this->resourceWriter->createWithRelated($form->getValues(), $this->request->getParsedBody()['relationships']);
             }
+
+            if ($hasRelations === false) {
+                $createdId = $this->resourceWriter->create($form->getValues());
+            }
+
         } catch (InvalidArgumentException $exception) {
             throw new HttpBadRequestException($exception->getMessage());
         }
 
-        return new CreateResponse();
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_CREATED, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $createdId,
+        ]));
+
+        return new CreateResponse($createdId);
     }
 
     /**
@@ -202,8 +234,14 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException($form->getErrors());
         }
+
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_BEFORE_UPDATE, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+            'values' => $form->getValues(),
+        ]));
 
         try {
             $rowsCount = $this->resourceWriter->update($id, $form->getValues());
@@ -214,6 +252,12 @@ abstract class AbstractResourceController
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();
         }
+
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_UPDATED, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+            'values' => $form->getValues(),
+        ]));
 
         return new UpdateResponse();
     }
@@ -234,8 +278,14 @@ abstract class AbstractResourceController
         $form->validate();
 
         if (empty($form->getErrors()) === false) {
-            throw new HttpBadRequestException(json_encode($form->getErrors()));
+            throw new HttpBadRequestException($form->getErrors());
         }
+
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_BEFORE_UPDATE, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+            'values' => $form->getValues(),
+        ]));
 
         try {
             $rowsCount = $this->resourceWriter->patch($id, $form->getValues());
@@ -246,6 +296,12 @@ abstract class AbstractResourceController
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();
         }
+
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_UPDATED, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+            'values' => $form->getValues(),
+        ]));
 
         return new PatchResponse();
     }
@@ -258,11 +314,21 @@ abstract class AbstractResourceController
     {
         $this->checkCallAvailability(ResourceActionTypesEnum::DELETE);
 
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_BEFORE_DELETE, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+        ]));
+
         $rowsCount = $this->resourceWriter->delete($id);
 
         if ($rowsCount === 0) {
             throw new HttpNotFoundException();
         }
+
+        $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_DELETED, new Message([
+            'resource' => $this->getResourceName(),
+            'id' => $id,
+        ]));
 
         return new DeleteResponse();
     }

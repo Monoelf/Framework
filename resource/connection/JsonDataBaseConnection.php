@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\resource\connection;
 
+use BadMethodCallException;
 use Monoelf\Framework\common\AliasManager;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\exceptions\FileNotExistsException;
@@ -121,7 +122,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
      * @throws \JsonException
      * @throws InvalidQueryException
      */
-    public function insert(string $resource, array $data): int
+    public function insert(string $resource, array $data): ?string
     {
         $filepath = $this->getFilepath($resource);
         $existingData = $this->readArrayFromJasonFile($filepath);
@@ -150,9 +151,7 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
             $this->saveLastId($resource, $insertingId);
         }
 
-        $this->lastInsertId = (string)$insertingId;
-
-        return 1;
+        return $this->lastInsertId = (string)$insertingId;
     }
 
     /**
@@ -329,5 +328,20 @@ final class JsonDataBaseConnection implements DataBaseConnectionInterface
     private function readArrayFromJasonFile(string $filepath): array
     {
         return json_decode(file_get_contents($filepath), true, flags: JSON_THROW_ON_ERROR);
+    }
+
+    public function beginTransaction(): void
+    {
+        throw new BadMethodCallException('Не реализуется для файлов');
+    }
+
+    public function commit(): void
+    {
+        throw new BadMethodCallException('Не реализуется для файлов');
+    }
+
+    public function rollBack(): void
+    {
+        throw new BadMethodCallException('Не реализуется для файлов');
     }
 }

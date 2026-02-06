@@ -20,13 +20,15 @@
         "phpunit/phpunit": "^9",
         "codeception/codeception": "^5.3",
         "codeception/module-phpbrowser": "*",
-        "codeception/module-asserts": "^3.2"
+        "codeception/module-asserts": "^3.2",
+        "hiddenpathz/changelog-writer": "^1.4"
     },
     "require": {
         "psr/http-message": "^2.0",
         "psr/container": "^2.0",
         "ext-posix": "*",
-        "ext-mbstring": "*"
+        "ext-mbstring": "*",
+        "firebase/php-jwt": "*"
     },
     "scripts": {
         "test": "phpunit"

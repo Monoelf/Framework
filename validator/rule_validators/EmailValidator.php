@@ -7,12 +7,12 @@ namespace Monoelf\Framework\validator\rule_validators;
 use Monoelf\Framework\validator\RuleValidatorInterface;
 use Monoelf\Framework\validator\ValidationException;
 
-final class RequiredValidator implements RuleValidatorInterface
+final class EmailValidator implements RuleValidatorInterface
 {
     public function validate(mixed $value, array $options = []): void
     {
-        if (is_null($value) === true || $value === '' || $value === []) {
-            throw new ValidationException($options['errorMessage'] ?? 'Значение обязательно для заполнения');
+        if (filter_var($value, FILTER_VALIDATE_EMAIL) === false) {
+            throw new ValidationException($options['errorMessage'] ?? 'Значение должно быть корректным email адресом');
         }
     }
 }

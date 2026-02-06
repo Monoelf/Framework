@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Monoelf\Framework\resource\form_request;
 
 use InvalidArgumentException;
-use Monoelf\Framework\validator\FormValidatorInterface;
 use Monoelf\Framework\validator\ValidationException;
 use Monoelf\Framework\validator\Validator;
 
@@ -64,39 +63,52 @@ abstract class AbstractFormRequest implements FormRequestInterface
 
     private function validateByRule(array $values, array $attributes, array|string $rule): void
     {
-        if ($this->isRuleFormValidation(is_string($rule) === true ? $rule : $rule[0])) {
-            $this->validator->validateForm($this, $rule, $attributes);
-
-            return;
-        }
-
         foreach ($attributes as $attribute) {
-            if (
-                $this->skipEmptyValues === true
-                && (array_key_exists($attribute, $values) === false
-                    || $values[$attribute] === ''
-                    || $values[$attribute] === null
-                )
-            ) {
+            $value = $this->getValueToValidate($attribute, $values);
+
+            if ($this->skipEmptyValues === true && ($value === '' || $value === null)) {
                 continue;
             }
 
             try {
-                $this->validator->validate($values[$attribute] ?? null, $rule);
+                $this->validator->validate($value, $rule);
             } catch (ValidationException $e) {
-                $this->addError($attribute, $e->getMessage());
+                $this->addAttributesError($attribute, $e->getMessage());
             }
         }
     }
 
-    private function isRuleFormValidation(string $rule): bool
+    private function getValueToValidate(string|array $attribute, array $values): mixed
     {
-        return class_exists($rule) === true && is_subclass_of($rule, FormValidatorInterface::class) === true;
+        if (is_string($attribute) === true) {
+            return $values[$attribute] ?? null;
+        }
+
+        $valuesList = [];
+
+        foreach ($attribute as $attributeName) {
+            $valuesList[] = $values[$attributeName] ?? null;
+        }
+
+        return $valuesList;
     }
 
     public function addError(string $attribute, string $message): void
     {
         $this->errors[$attribute][] = $message;
+    }
+
+    private function addAttributesError(array|string $attributes, string $rule): void
+    {
+        if (is_string($attributes) === true) {
+            $this->addError($attributes, $rule);
+
+            return;
+        }
+
+        foreach ($attributes as $attribute) {
+            $this->addError($attribute, $rule);
+        }
     }
 
     public function getErrors(): array
@@ -132,7 +144,7 @@ abstract class AbstractFormRequest implements FormRequestInterface
 
     public function getFields(): array
     {
-        return array_unique(array_merge(...array_column($this->getRules(), 0)));
+        return array_unique(array_filter(array_merge(...array_column($this->getRules(), 0)), 'is_string'));
     }
 
     protected function getRules(): array

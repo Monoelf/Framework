@@ -7,6 +7,7 @@ namespace Monoelf\Framework\resource;
 use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
+use Throwable;
 
 final class DataBaseResourceWriter implements ResourceWriterInterface
 {
@@ -39,33 +40,50 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
         return $this;
     }
 
-    /**
-     * @param array $values
-     * @return int
-     */
-    public function create(array $values): int
+    public function create(array $values): ?string
     {
         return $this->connection->insert($this->resourceName, $values);
     }
 
-    public function createRelated(array $relationships): void
+    public function createWithRelated(array $values, array $relationships): ?string
     {
+        $this->connection->beginTransaction();
+
+        try {
+            $createdId = $this->createWithRelatedInternal($values, $relationships);
+        } catch (Throwable $e) {
+            $this->connection->rollBack();
+
+            throw $e;
+        }
+
+        $this->connection->commit();
+
+        return $createdId;
+    }
+
+    private function createWithRelatedInternal(array $values, array $relationships): ?string
+    {
+        $createdId = $this->create($values);
+
         $this->validateRelationshipRules();
 
         foreach ($relationships as $relationName => $params) {
             $relationRules = $this->relationships[$relationName]
                 ?? throw new InvalidArgumentException("Связь {$relationName} с не задана");
 
-            if (isset($relationRules['otherRelationshipKey']) === true) {
-                [$originKey, $targetKey] = $this->getRelationKeys($relationRules['otherRelationshipKey']);
+            if (isset($relationRules['viaKey']) === true) {
+                [$originKey, $targetKey] = $this->getRelationKeys($relationRules['viaKey']);
                 $values[$targetKey] = $params['data'][$originKey];
             }
 
-            [, $targetKey] = $this->getRelationKeys($relationRules['relationshipKey']);
-            $values[$targetKey] = $this->connection->getLastInsertId();
+            [, $targetKey] = $this->getRelationKeys($relationRules['key']);
+            $values[$targetKey] = $createdId;
 
             $this->connection->insert($relationRules['table'], $values);
         }
+
+        return $createdId;
     }
 
     private function validateRelationshipRules(): void
@@ -75,12 +93,12 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
                 throw new InvalidArgumentException("Для связи {$relationName} не задана таблица (table)");
             }
 
-            if (isset($params['relationshipKey']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи (relationshipKey)");
+            if (isset($params['key']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи ресурса с таблицей (key)");
             }
 
-            if (isset($params['otherRelationshipKey']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задано правило второй связи (otherRelationshipKey)");
+            if (isset($params['viaKey']) === false) {
+                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи связанного ресурса с таблице (viaKey)");
             }
         }
     }

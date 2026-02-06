@@ -8,7 +8,7 @@ use Monoelf\Framework\common\ErrorHandlerInterface;
 use Monoelf\Framework\common\ModuleInterface;
 use Monoelf\Framework\config_storage\ConfigurationStorage;
 use Monoelf\Framework\container\ContainerInterface;
-use Monoelf\Framework\http\dto\BaseControllerResponse;
+use Monoelf\Framework\http\response\Response;
 use Monoelf\Framework\http\exceptions\HttpException;
 use Monoelf\Framework\http\exceptions\HttpNotAcceptableException;
 use Monoelf\Framework\http\router\HTTPRouterInterface;
@@ -37,19 +37,19 @@ final class HttpKernel implements HttpKernelInterface
         try {
             $result = $this->router->dispatch($request);
 
-            $message = null;
+            $message = $result;
             $statusCode = StatusCodeEnum::STATUS_OK->value;
-            $responseContentType = null;
-
-            if ($result instanceof BaseControllerResponse === true) {
-                $statusCode = $result->statusCode;
-                $responseContentType = $result->contentType;
-                $result = $result->responseBody;
-            }
+            $responseContentType = 'text/html; charset=utf-8';
 
             if (is_array($result) === true) {
-                $responseContentType = $responseContentType ?? 'application/json';
+                $responseContentType = 'application/json';
                 $message = json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+
+            if ($result instanceof Response === true) {
+                $statusCode = $result->statusCode;
+                $responseContentType = $result->contentType;
+                $message = $result->responseBody;
             }
 
             $isContentTypeAccepted = $this->isContentTypeAccepted(
@@ -63,9 +63,9 @@ final class HttpKernel implements HttpKernelInterface
 
             $response = $this->container->get(ServerResponseInterface::class)
                 ->withStatus($statusCode)
-                ->withHeader('Content-Type', $responseContentType ?? 'text/html; charset=utf-8');
+                ->withHeader('Content-Type', $responseContentType);
 
-            $response->getBody()->write($message ?? (string)$result);
+            $response->getBody()->write((string)$message);
         } catch (HttpException $e) {
             $this->logger->error($e);
 
@@ -107,10 +107,6 @@ final class HttpKernel implements HttpKernelInterface
     {
         if (empty($acceptTypes) === true) {
             return true;
-        }
-
-        if ($contentType === null) {
-            return false;
         }
 
         $contentTypeBase = trim(explode(';', $contentType)[0]);

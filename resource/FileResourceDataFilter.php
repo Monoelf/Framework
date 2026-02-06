@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\resource;
 
+use BadMethodCallException;
 use Monoelf\Framework\container\ContainerInterface;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\query\file\FileQueryBuilderInterface;
@@ -98,5 +99,10 @@ final class FileResourceDataFilter implements ResourceDataFilterInterface
         $this->queryBuilder->offset(isset($condition['offset']) === true ? (int)$condition['offset'] : -1);
 
         return $this->queryBuilder;
+    }
+
+    public function setRelationships(array $relationships): static
+    {
+        throw new BadMethodCallException('Связи не реализуются для файлов');
     }
 }
