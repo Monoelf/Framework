@@ -159,6 +159,10 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 
     private function appendOperatorCondition(string $field, string $operator, mixed $value): array
     {
+        if ($operator === OperatorsEnum::LIKE->value) {
+            $value = '%' . $value . '%';
+        }
+
         return [
             'field' => $field,
             'operator' => match ($operator) {

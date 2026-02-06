@@ -10,27 +10,14 @@ final class Route implements MiddlewareAssignable
         public string $method,
         public string $path,
         public string $regex,
-        public array  $handler,
-        public array  $middlewares = [],
-        public array  $params = [],
+        public array $handler,
+        public array $middlewares = [],
+        public array $params = [],
+        public array $groupStack = [],
     ) {}
 
     public function addMiddleware(callable|string $middleware): MiddlewareAssignable
     {
-        if (is_callable($middleware) === true) {
-            $this->middlewares[] = $middleware(...);
-
-            return $this;
-        }
-
-        if (class_exists($middleware) === false) {
-            throw new \InvalidArgumentException("Не найден мидлвеер '{$middleware}'");
-        }
-
-        if (is_subclass_of($middleware, MiddlewareInterface::class) === false) {
-            throw new \InvalidArgumentException("Мидлвеер должен реализовывать MiddlewareInterface");
-        }
-
         $this->middlewares[] = $middleware;
 
         return $this;
