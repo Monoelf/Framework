@@ -111,9 +111,9 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
 
             $field = $this->escapeField($value['field']);
 
-            if (in_array($value['operator'], ['IN', 'NOT IN'])) {
+            if (in_array($value['operator'], ['IN', 'NOT IN']) === true) {
                 $params = $this->buildParamsForArrayWhere($value['value']);
-                $whereParts[] = "{$field} {$value['operator']} (" . implode(', ', $params) . ")";
+                $whereParts[] = "{$field} {$value['operator']} (" . implode(', ', $params) . ')';
 
                 continue;
             }
