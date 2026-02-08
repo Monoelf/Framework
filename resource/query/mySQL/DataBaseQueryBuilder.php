@@ -105,15 +105,22 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         $whereParts = [];
 
         foreach ($condition as $value) {
-            if (is_array($value) === true && isset($value['field'], $value['operator'], $value['value']) === true) {
-                $param = 'where_' . count($this->bindings);
-
-                $field = $this->escapeField($value['field']);
-
-                $whereParts[] = "{$field} {$value['operator']} :$param";
-
-                $this->bindings[$param] = $value['value'];
+            if (is_array($value) === false || isset($value['field'], $value['operator'], $value['value']) === false) {
+                continue;
             }
+
+            $field = $this->escapeField($value['field']);
+
+            if (in_array($value['operator'], ['IN', 'NOT IN'])) {
+                $params = $this->buildParamsForArrayWhere($value['value']);
+                $whereParts[] = "{$field} {$value['operator']} (" . implode(', ', $params) . ")";
+
+                continue;
+            }
+
+            $param = 'where_' . count($this->bindings);
+            $this->bindings[$param] = $value['value'];
+            $whereParts[] = "{$field} {$value['operator']} :$param";
         }
 
         if (empty($whereParts) === false) {
@@ -123,6 +130,18 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $this;
     }
 
+    private function buildParamsForArrayWhere(array $values): array
+    {
+        $params = [];
+
+        foreach ($values as $item) {
+            $param = 'where_' . count($this->bindings);
+            $params[] = ":$param";
+            $this->bindings[$param] = $item;
+        }
+
+        return $params;
+    }
     private function buildFilterConditions(array $filters): array
     {
         $conditions = [];
