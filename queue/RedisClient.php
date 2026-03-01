@@ -16,12 +16,12 @@ final class RedisClient
         $this->redis->connect($host, $port);
     }
 
-    public function set(string $key, string $value, int $expire): void
+    public function set(string $key, mixed $value, int $expire): void
     {
         $this->redis->setex($key, $expire, $value);
     }
 
-    public function get(string $key): ?string
+    public function get(string $key): mixed
     {
         $value = $this->redis->get($key);
 
