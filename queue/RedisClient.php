@@ -14,6 +14,7 @@ final class RedisClient
     {
         $this->redis = new Redis();
         $this->redis->connect($host, $port);
+        $this->redis->setOption(Redis::OPT_SERIALIZER, Redis::SERIALIZER_PHP);
     }
 
     public function set(string $key, mixed $value, int $expire): void
@@ -37,6 +38,29 @@ final class RedisClient
         $this->redis->del($key);
     }
 
+    /* ===== MEMBERS ===== */
+
+    public function addMember(string $key, string $member): void
+    {
+        $this->redis->sAdd($key, $member);
+    }
+
+    public function getMembers(string $key): array
+    {
+        return $this->redis->sMembers($key);
+    }
+
+    public function deleteMembers(string $key): void
+    {
+        $members = $this->getMembers($key);
+
+        if (empty($members) === false) {
+            $this->redis->del($members);
+        }
+
+        $this->redis->del($key);
+    }
+
     /* ===== QUEUE ===== */
 
     public function push(string $queue, string $payload): void
@@ -53,5 +77,17 @@ final class RedisClient
         }
 
         return $data[1];
+    }
+
+    /* ===== PUBLISH/SUBSCRIBE ===== */
+
+    public function publish(string $channel, string $data): void
+    {
+        $this->redis->publish($channel, $data);
+    }
+
+    public function subscribe(string $channel, callable $callback): void
+    {
+        $this->redis->subscribe([$channel], $callback);
     }
 }

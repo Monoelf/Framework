@@ -215,6 +215,7 @@ abstract class AbstractResourceController
         $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_CREATED, new Message([
             'resource' => $this->getResourceName(),
             'id' => $createdId,
+            'values' => $form->getValues(),
         ]));
 
         return new CreateResponse($createdId);
