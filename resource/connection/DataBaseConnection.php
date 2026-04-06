@@ -35,10 +35,6 @@ class DataBaseConnection implements DataBaseConnectionInterface
         $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
 
-    /**
-     * @param QueryBuilderInterface $query
-     * @return array
-     */
     public function select(QueryBuilderInterface $query): array
     {
         $statement = $this->executeQuery($query);
@@ -46,10 +42,6 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $statement->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    /**
-     * @param QueryBuilderInterface $query
-     * @return array|null
-     */
     public function selectOne(QueryBuilderInterface $query): ?array
     {
         $statement = $this->executeQuery($query);
@@ -59,10 +51,6 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $result ?: null;
     }
 
-    /**
-     * @param QueryBuilderInterface $query
-     * @return array
-     */
     public function selectColumn(QueryBuilderInterface $query): array
     {
         $statement = $this->executeQuery($query);
@@ -70,10 +58,6 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $statement->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /**
-     * @param QueryBuilderInterface $query
-     * @return mixed
-     */
     public function selectScalar(QueryBuilderInterface $query): mixed
     {
         $statement = $this->executeQuery($query);
@@ -81,12 +65,6 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $statement->fetchColumn();
     }
 
-    /**
-     * @param string $resource
-     * @param array $data
-     * @param array $condition
-     * @return int
-     */
     public function update(string $resource, array $data, array $condition): int
     {
         $setParts = [];
@@ -143,11 +121,6 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $this->lastInsertId = $this->connection->lastInsertId();
     }
 
-    /**
-     * @param string $resource
-     * @param array $condition
-     * @return int
-     */
     public function delete(string $resource, array $condition): int
     {
         $whereParts = [];
@@ -175,18 +148,11 @@ class DataBaseConnection implements DataBaseConnectionInterface
         return $statement->rowCount();
     }
 
-    /**
-     * @return string
-     */
     public function getLastInsertId(): string
     {
         return $this->lastInsertId;
     }
 
-    /**
-     * @param DataBaseQueryBuilderInterface $query
-     * @return PDOStatement
-     */
     private function executeQuery(DataBaseQueryBuilderInterface $query): PDOStatement
     {
         $statementParams = $query->getStatement();

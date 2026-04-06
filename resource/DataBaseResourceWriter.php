@@ -13,19 +13,11 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
 {
     private string $resourceName = '';
     private array $accessibleFields = [];
-    private array $relationships = [];
 
-    /**
-     * @param DataBaseConnectionInterface $connection
-     */
     public function __construct(
         private readonly DataBaseConnectionInterface $connection
     ) {}
 
-    /**
-     * @param string $name
-     * @return $this
-     */
     public function setResourceName(string $name): static
     {
         $this->resourceName = $name;
@@ -33,130 +25,41 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
         return $this;
     }
 
-    public function setRelationships(array $relationships): static
-    {
-        $this->relationships = $relationships;
-
-        return $this;
-    }
-
     public function create(array $values): ?string
     {
+        $this->validateFields(array_keys($values));
+
         return $this->connection->insert($this->resourceName, $values);
     }
 
-    public function createWithRelated(array $values, array $relationships): ?string
-    {
-        $this->connection->beginTransaction();
-
-        try {
-            $createdId = $this->createWithRelatedInternal($values, $relationships);
-        } catch (Throwable $e) {
-            $this->connection->rollBack();
-
-            throw $e;
-        }
-
-        $this->connection->commit();
-
-        return $createdId;
-    }
-
-    private function createWithRelatedInternal(array $values, array $relationships): ?string
-    {
-        $createdId = $this->create($values);
-
-        $this->validateRelationshipRules();
-
-        foreach ($relationships as $relationName => $params) {
-            $relationRules = $this->relationships[$relationName]
-                ?? throw new InvalidArgumentException("Связь {$relationName} с не задана");
-
-            if (isset($relationRules['viaKey']) === true) {
-                [$originKey, $targetKey] = $this->getRelationKeys($relationRules['viaKey']);
-                $values[$targetKey] = $params['data'][$originKey];
-            }
-
-            [, $targetKey] = $this->getRelationKeys($relationRules['key']);
-            $values[$targetKey] = $createdId;
-
-            $this->connection->insert($relationRules['table'], $values);
-        }
-
-        return $createdId;
-    }
-
-    private function validateRelationshipRules(): void
-    {
-        foreach ($this->relationships as $relationName => $params) {
-            if (isset($params['table']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задана таблица (table)");
-            }
-
-            if (isset($params['key']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи ресурса с таблицей (key)");
-            }
-
-            if (isset($params['viaKey']) === false) {
-                throw new InvalidArgumentException("Для связи {$relationName} не задано правило связи связанного ресурса с таблице (viaKey)");
-            }
-        }
-    }
-
-    private function getRelationKeys(array|string $relationKey): array
-    {
-        if (is_string($relationKey) === true) {
-            $relationKey = ['id' => $relationKey];
-        }
-
-        $originKey = array_key_first($relationKey);
-        $targetKey = $relationKey[$originKey];
-
-        return [$originKey, $targetKey];
-    }
-
-    /**
-     * @param string|int $id
-     * @param array $values
-     * @return int
-     */
     public function update(string|int $id, array $values): int
     {
+        $this->validateFields(array_keys($values));
+
         $values = $this->prepareValues($values);
 
-        $values['id'] = (int)$id;
+        $values['id'] = (int) $id;
 
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
-    /**
-     * @param string|int $id
-     * @param array $values
-     * @return int
-     */
     public function patch(string|int $id, array $values): int
     {
-        $values['id'] = (int)$id;
+        $this->validateFields(array_keys($values));
+
+        $values['id'] = (int) $id;
 
         return $this->connection->update($this->resourceName, $values, ['id' => $id]);
     }
 
-    /**
-     * @param string|int $id
-     * @return int
-     */
     public function delete(string|int $id): int
     {
         return $this->connection->delete(
             $this->resourceName,
-            ['id' => $id]
+            ['id' => $id],
         );
     }
 
-    /**
-     * @param array $fieldNames
-     * @return $this
-     */
     public function setAccessibleFields(array $fieldNames): static
     {
         $this->accessibleFields = $fieldNames;
@@ -164,10 +67,6 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
         return $this;
     }
 
-    /**
-     * @param array $values
-     * @return array
-     */
     private function prepareValues(array $values): array
     {
         foreach ($this->accessibleFields as $field) {
@@ -177,5 +76,14 @@ final class DataBaseResourceWriter implements ResourceWriterInterface
         }
 
         return $values;
+    }
+
+    private function validateFields(array $fieldNames): void
+    {
+        $notAllowedFields = array_diff($fieldNames, $this->accessibleFields);
+
+        if (empty($notAllowedFields) === false) {
+            throw new InvalidArgumentException('Запрещен доступ к полям: ' . implode(', ', $notAllowedFields));
+        }
     }
 }

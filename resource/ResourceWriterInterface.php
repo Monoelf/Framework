@@ -10,10 +10,6 @@ interface ResourceWriterInterface
 
     public function setAccessibleFields(array $fieldNames): static;
 
-    public function setRelationships(array $relationships): static;
-
-    public function createWithRelated(array $values, array $relationships): ?string;
-
     public function create(array $values): ?string;
 
     public function update(string|int $id, array $values): int;
