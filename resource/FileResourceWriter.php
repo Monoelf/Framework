@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Monoelf\Framework\resource;
 
-use BadMethodCallException;
+use InvalidArgumentException;
 use Monoelf\Framework\resource\connection\DataBaseConnectionInterface;
 use Monoelf\Framework\resource\ResourceWriterInterface;
 
@@ -12,7 +12,7 @@ final class FileResourceWriter implements ResourceWriterInterface
 {
     private ?string $resourceName = null;
 
-    private ?array $accessibleField = null;
+    private ?array $accessibleFields = null;
 
     public function __construct(
         private readonly DataBaseConnectionInterface $databaseConnection,
@@ -21,6 +21,13 @@ final class FileResourceWriter implements ResourceWriterInterface
     public function setResourceName(string $name): static
     {
         $this->resourceName = $name;
+
+        return $this;
+    }
+
+    public function setAccessibleFields(array $fieldNames): static
+    {
+        $this->accessibleFields = $fieldNames;
 
         return $this;
     }
@@ -39,7 +46,7 @@ final class FileResourceWriter implements ResourceWriterInterface
 
         $values['id'] = (int)$id;
 
-        foreach ($this->accessibleField as $fieldName) {
+        foreach ($this->accessibleFields as $fieldName) {
             $values[$fieldName] = $values[$fieldName] ?? null;
         }
 
@@ -78,37 +85,20 @@ final class FileResourceWriter implements ResourceWriterInterface
     public function validateSelfState(): void
     {
         if ($this->resourceName === null) {
-            throw new \InvalidArgumentException('Ресурс не задан');
+            throw new InvalidArgumentException('Ресурс не задан');
         }
 
-        if ($this->accessibleField === null) {
-            throw new \InvalidArgumentException('Доступные поля не заданы');
+        if ($this->accessibleFields === null) {
+            throw new InvalidArgumentException('Доступные поля не заданы');
         }
-    }
-
-    public function setAccessibleFields(array $fieldNames): static
-    {
-        $this->accessibleField = $fieldNames;
-
-        return $this;
     }
 
     private function validateFieldsAccessible(array $fieldNames): void
     {
-        foreach ($fieldNames as $fieldName) {
-            if (in_array($fieldName, $this->accessibleField, true) === false) {
-                throw new \InvalidArgumentException("Поле '{$fieldName}' недоступно для записи");
-            }
+        $notAllowedFields = array_diff($fieldNames, $this->accessibleFields);
+
+        if (empty($notAllowedFields) === false) {
+            throw new InvalidArgumentException('Запрещен доступ к полям: ' . implode(', ', $notAllowedFields));
         }
-    }
-
-    public function setRelationships(array $relationships): static
-    {
-        throw new BadMethodCallException('Связи не реализуются для файлов');
-    }
-
-    public function createWithRelated(array $values, array $relationships): ?string
-    {
-        throw new BadMethodCallException('Связи не реализуются для файлов');
     }
 }

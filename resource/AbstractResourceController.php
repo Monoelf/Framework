@@ -37,8 +37,7 @@ abstract class AbstractResourceController
 
         $this->resourceWriter
             ->setResourceName($this->getResourceName())
-            ->setAccessibleFields($this->getAccessibleFields())
-            ->setRelationships($this->getRelationships());
+            ->setAccessibleFields($this->getAccessibleFields());
     }
 
     protected function getForms(): array
@@ -198,16 +197,7 @@ abstract class AbstractResourceController
         ]));
 
         try {
-            $hasRelations = isset($this->request->getParsedBody()['relationships']) === true;
-
-            if ($hasRelations === true) {
-                $createdId = $this->resourceWriter->createWithRelated($form->getValues(), $this->request->getParsedBody()['relationships']);
-            }
-
-            if ($hasRelations === false) {
-                $createdId = $this->resourceWriter->create($form->getValues());
-            }
-
+            $createdId = $this->resourceWriter->create($form->getValues());
         } catch (InvalidArgumentException $exception) {
             throw new HttpBadRequestException($exception->getMessage());
         }
@@ -215,6 +205,7 @@ abstract class AbstractResourceController
         $this->eventDispatcher->trigger(ResourceEvent::RESOURCE_CREATED, new Message([
             'resource' => $this->getResourceName(),
             'id' => $createdId,
+            'values' => $form->getValues(),
         ]));
 
         return new CreateResponse($createdId);
