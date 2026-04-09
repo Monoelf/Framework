@@ -35,10 +35,6 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $this;
     }
 
-    /**
-     * @param array|string $fields
-     * @return $this
-     */
     public function select(array|string $fields): static
     {
         if (is_string($fields) === true) {
@@ -61,64 +57,43 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $this;
     }
 
-
-    /**
-     * @param array|string $resource
-     * @return $this
-     */
     public function from(array|string $resource): static
     {
-        if (is_array($resource) === true) {
-            if (count($resource) !== 2) {
-                throw new InvalidArgumentException("FROM с массивом должен содержать [table, alias]");
-            }
-
-            $table = $this->escapeField($resource[0]);
-
-            $alias = $this->escapeField($resource[1]);
-
-            $this->from = "FROM $table AS $alias";
-            $this->originalResourceName = $resource[0];
+        if (is_string($resource) === true) {
+            $this->from = 'FROM ' . $this->escapeField($resource);
+            $this->originalResourceName = $resource;
 
             return $this;
         }
 
-        $this->from = 'FROM ' . $this->escapeField($resource);
-        $this->originalResourceName = $resource;
+        if (count($resource) !== 1) {
+            throw new InvalidArgumentException("FROM с массивом должен содержать [alias => table]");
+        }
+
+        $alias = array_key_first($resource);
+        $table = $resource[$alias];
+
+        $table = $this->escapeField($table);
+        $alias = $this->escapeField($alias);
+
+        $this->from = "FROM $table AS $alias";
+        $this->originalResourceName = $table;
 
         return $this;
     }
 
-
-    /**
-     * @param array $condition
-     * @return $this
-     */
     public function where(array $condition): static
     {
-        $condition = $this->buildFilterConditions($condition);
-
-        $this->where = '';
-
+        $this->where = null;
         $this->bindings = [];
 
-        $whereParts = [];
+        $conditions = $this->buildFilterConditions($condition);
 
-        foreach ($condition as $value) {
-            if (is_array($value) === true && isset($value['field'], $value['operator'], $value['value']) === true) {
-                $param = 'where_' . count($this->bindings);
-
-                $field = $this->escapeField($value['field']);
-
-                $whereParts[] = "{$field} {$value['operator']} :$param";
-
-                $this->bindings[$param] = $value['value'];
-            }
+        if (empty($conditions) === true) {
+            return $this;
         }
 
-        if (empty($whereParts) === false) {
-            $this->where = 'WHERE ' . implode(' AND ', $whereParts);
-        }
+        $this->where = 'WHERE ' . implode(' AND ', $conditions);
 
         return $this;
     }
@@ -128,24 +103,60 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         $conditions = [];
 
         foreach ($filters as $field => $operators) {
-            $field = $this->buildFilterFieldName($field);
+            $field = $this->escapeField($this->buildFilterFieldName($field));
 
             if (is_array($operators) === false) {
-                $conditions[] = [
-                    'field' => $field,
-                    'operator' => '=',
-                    'value' => $operators,
-                ];
-
-                continue;
+                $operators = [OperatorsEnum::EQ->value => $operators];
             }
 
             foreach ($operators as $operator => $value) {
-                $conditions[] = $this->appendOperatorCondition($field, $operator, $value);
+                $conditions[] = $this->buildConditionPart($field, $operator, $value);
             }
         }
 
         return $conditions;
+    }
+
+    private function buildConditionPart(string $field, string $operator, mixed $value): string
+    {
+        $sqlOperator = $this->getSqlOperator($operator);
+
+        if ($value === null) {
+            if ($operator === OperatorsEnum::EQ->value) {
+                return "{$field} IS NULL";
+            }
+
+            if ($operator === OperatorsEnum::NE->value) {
+                return "{$field} IS NOT NULL";
+            }
+
+            throw new InvalidArgumentException("Оператор {$operator} не поддерживает NULL");
+        }
+
+        if ($operator === OperatorsEnum::IN->value || $operator === OperatorsEnum::NIN->value) {
+            if (empty($value) === true || is_array($value) === false) {
+                throw new InvalidArgumentException("Оператор {$operator} требует непустой массив");
+            }
+
+            $params = [];
+
+            foreach ($value as $item) {
+                $param = 'where_' . count($this->bindings);
+                $params[] = ":$param";
+                $this->bindings[$param] = $item;
+            }
+
+            return "{$field} {$sqlOperator} (" . implode(', ', $params) . ")";
+        }
+
+        if ($operator === OperatorsEnum::LIKE->value) {
+            $value = '%' . $value . '%';
+        }
+
+        $param = 'where_' . count($this->bindings);
+        $this->bindings[$param] = $value;
+
+        return "{$field} {$sqlOperator} :$param";
     }
 
     private function buildFilterFieldName(string $field): string
@@ -157,60 +168,22 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $field;
     }
 
-    private function appendOperatorCondition(string $field, string $operator, mixed $value): array
+    private function getSqlOperator(string $operator): string
     {
-        if ($operator === OperatorsEnum::LIKE->value) {
-            $value = '%' . $value . '%';
-        }
-
-        return [
-            'field' => $field,
-            'operator' => match ($operator) {
-                OperatorsEnum::EQ->value => '=',
-                OperatorsEnum::NE->value => '!=',
-                OperatorsEnum::GT->value => '>',
-                OperatorsEnum::LT->value => '<',
-                OperatorsEnum::GTE->value => '>=',
-                OperatorsEnum::LTE->value => '<=',
-                OperatorsEnum::LIKE->value => 'LIKE',
-                OperatorsEnum::IN->value => 'IN',
-                OperatorsEnum::NIN->value => 'NOT IN',
-                default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
-            },
-            'value' => $value
-        ];
+        return match ($operator) {
+            OperatorsEnum::EQ->value => '=',
+            OperatorsEnum::NE->value => '!=',
+            OperatorsEnum::GT->value => '>',
+            OperatorsEnum::LT->value => '<',
+            OperatorsEnum::GTE->value => '>=',
+            OperatorsEnum::LTE->value => '<=',
+            OperatorsEnum::LIKE->value => 'LIKE',
+            OperatorsEnum::IN->value => 'IN',
+            OperatorsEnum::NIN->value => 'NOT IN',
+            default => throw new InvalidArgumentException("Неизвестный оператор: {$operator}")
+        };
     }
 
-    /**
-     * @param string $column
-     * @param array $values
-     * @return $this
-     */
-    public function whereIn(string $column, array $values): static
-    {
-        $params = [];
-
-        $escapedColumn = $this->escapeField($column);
-
-        foreach ($values as $value) {
-            $param = 'where_in_' . count($this->bindings);
-
-            $params[] = ":$param";
-
-            $this->bindings[$param] = $value;
-        }
-
-        $this->where = 'WHERE ' . $escapedColumn . ' IN (' . implode(', ', $params) . ')';
-
-        return $this;
-    }
-
-    /**
-     * @param string $type
-     * @param string|array $resource
-     * @param string $on
-     * @return $this
-     */
     public function join(string $type, string|array $resource, string $on): static
     {
         $type = strtoupper($type);
@@ -218,31 +191,29 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
             throw new InvalidArgumentException("Некорректный тип JOIN'а");
         }
 
-        if (is_array($resource) === true) {
-            if (count($resource) !== 2) {
-                throw new InvalidArgumentException("JOIN с массивом должен содержать [table, alias]");
-            }
+        if (is_string($resource) === true) {
+            $table = $this->escapeField($resource);
 
-            $table = $this->escapeField($resource[0]);
-
-            $alias = $this->escapeField($resource[1]);
-
-            $this->joins[] = "$type JOIN $table AS $alias ON $on";
+            $this->joins[] = "$type JOIN $table ON $on";
 
             return $this;
         }
 
-        $table = $this->escapeField($resource);
+        if (count($resource) !== 1) {
+            throw new InvalidArgumentException("FROM с массивом должен содержать [alias => table]");
+        }
 
-        $this->joins[] = "$type JOIN $table ON $on";
+        $alias = array_key_first($resource);
+        $table = $resource[$alias];
+
+        $table = $this->escapeField($table);
+        $alias = $this->escapeField($alias);
+
+        $this->joins[] = "$type JOIN $table AS $alias ON $on";
 
         return $this;
     }
 
-    /**
-     * @param array $columns
-     * @return $this
-     */
     public function orderBy(array $columns): static
     {
         $orderParts = [];
@@ -296,10 +267,6 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $this;
     }
 
-    /**
-     * @param int $limit
-     * @return $this
-     */
     public function limit(int $limit): static
     {
         $this->limit = 'LIMIT ' . $limit;
@@ -307,10 +274,6 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $this;
     }
 
-    /**
-     * @param int $offset
-     * @return $this
-     */
     public function offset(int $offset): static
     {
         $this->offset = 'OFFSET ' . $offset;
@@ -365,11 +328,6 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return $result;
     }
 
-    /**
-     * @param string $field
-     * @param bool $isAlias
-     * @return string
-     */
     private function escapeField(string $field, bool $isAlias = false): string
     {
         if ($field === '*') {
@@ -386,9 +344,6 @@ final class DataBaseQueryBuilder implements DataBaseQueryBuilderInterface
         return '`' . str_replace('`', '``', $field) . '`';
     }
 
-    /**
-     * @return string
-     */
     public function getRawSql(): string
     {
         $statement = $this->getStatement();

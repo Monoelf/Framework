@@ -12,8 +12,6 @@ interface QueryBuilderInterface
 
     public function where(array $condition): static;
 
-    public function whereIn(string $column, array $values): static;
-
     public function join(string $type, string|array $resource, string $on): static;
 
     public function orderBy(array $columns): static;

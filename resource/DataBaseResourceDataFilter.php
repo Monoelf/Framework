@@ -102,14 +102,45 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         return $result;
     }
 
+    private function prepareQuery(array $conditions): void
+    {
+        [$fields, $filters, $relationships, $limit, $offset] = $this->extractConditionParts($conditions);
+
+        $this->queryBuilder
+            ->reset()
+            ->select($fields)
+            ->from($this->resourceName)
+            ->where($filters);
+
+        if ($limit !== null) {
+            $this->queryBuilder->limit($limit);
+        }
+
+        if ($offset !== null) {
+            $this->queryBuilder->offset($offset);
+        }
+
+        $this->prepareJoins($relationships);
+    }
+
     private function extractConditionParts(array $condition): array
     {
         $fields = $condition['fields'] ?? [];
         $filters = $condition['filter'] ?? [];
         $relationships = $condition['expand'] ?? [];
+        $limit = $condition['limit'] ?? null;
+        $offset = $condition['offset'] ?? null;
 
         if (is_array($fields) === false || is_array($filters) === false || is_array($relationships) === false) {
             throw new InvalidArgumentException('Поля, фильтры и связи должны быть массивами');
+        }
+
+        if ($limit !== null && filter_var($limit, FILTER_VALIDATE_INT) === false) {
+            throw new InvalidArgumentException('Лимит должен быть целым числом');
+        }
+
+        if ($offset !== null && filter_var($offset, FILTER_VALIDATE_INT) === false) {
+            throw new InvalidArgumentException('Офсет должен быть целым числом');
         }
 
         $this->validateFields($fields);
@@ -120,7 +151,34 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
             $fields = $this->accessibleFields;
         }
 
-        return [$fields, $filters, $relationships];
+        return [$fields, $filters, $relationships, $limit, $offset];
+    }
+
+    private function validateFields(array $fieldNames): void
+    {
+        $notAllowedFields = array_diff($fieldNames, $this->accessibleFields);
+
+        if (empty($notAllowedFields) === false) {
+            throw new InvalidArgumentException('Запрещен доступ к полям: ' . implode(', ', $notAllowedFields));
+        }
+    }
+
+    private function validateFilters(array $filterNames): void
+    {
+        $notAllowedFilters = array_diff($filterNames, $this->accessibleFilters);
+
+        if (empty($notAllowedFilters) === false) {
+            throw new InvalidArgumentException('Запрещена фильтрация по полям: ' . implode(', ', $notAllowedFilters));
+        }
+    }
+
+    private function validateRelationships(array $relationships): void
+    {
+        $nonExistentRelationships = array_diff($relationships, array_keys($this->relationships));
+
+        if (empty($nonExistentRelationships) === false) {
+            throw new InvalidArgumentException('Не задана связь с ресурсами: ' . implode(', ', $nonExistentRelationships));
+        }
     }
 
     private function prepareJoins(array $joins): void
@@ -154,45 +212,5 @@ final class DataBaseResourceDataFilter implements ResourceDataFilterInterface
         $targetKey = $key[$originKey];
 
         return $originTable . '.' . $originKey . ' = ' . $targetTable . '.' . $targetKey;
-    }
-
-    private function validateFields(array $fields): void
-    {
-        foreach ($fields as $field) {
-            if (in_array($field, $this->accessibleFields, true) === false) {
-                throw new InvalidArgumentException("Доступ к полю '{$field}' запрещён");
-            }
-        }
-    }
-
-    private function validateFilters(array $fields): void
-    {
-        foreach ($fields as $field) {
-            if (in_array($field, $this->accessibleFilters, true) === false) {
-                throw new InvalidArgumentException("Фильтрация по полю '{$field}' недопустима");
-            }
-        }
-    }
-
-    private function validateRelationships(array $relationships): void
-    {
-        foreach ($relationships as $relationship) {
-            if (array_key_exists($relationship, $this->relationships) === false) {
-                throw new InvalidArgumentException("Связь с ресурсом {$relationship} не задана");
-            }
-        }
-    }
-
-    private function prepareQuery(array $conditions): void
-    {
-        [$fields, $filters, $relationships] = $this->extractConditionParts($conditions);
-
-        $this->queryBuilder
-            ->reset()
-            ->select($fields)
-            ->from($this->resourceName)
-            ->where($filters);
-
-        $this->prepareJoins($relationships);
     }
 }
