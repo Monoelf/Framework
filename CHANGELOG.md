@@ -3,6 +3,11 @@
 Формат основан на [стандарте формата CHANGELOG](https://keepachangelog.com/en/1.0.0/),
 и придерживается [правил версионирования](https://semver.org/spec/v2.0.0.html).
 
+## [ [0.8.1](https://github.com/Monoelf/Framework/tree/0.8.1) ] - 17.04.2026
+
+- Исправлено:
+  - Отрисовка страницы ошибки по умолчанию
+
 ## [ [0.8.0](https://github.com/Monoelf/Framework/tree/0.8.0) ] - 09.04.2026
 
 - Реализовано:
