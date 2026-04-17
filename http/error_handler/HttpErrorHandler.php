@@ -53,7 +53,10 @@ final class HttpErrorHandler implements ErrorHandlerInterface
             );
         } catch (ViewNotFoundException | StrategyNotFoundException) {
             return $this->view->render('@framework/http/error', [
-                'exception' => $throwable,
+                'message' => $throwable->getMessage(),
+                'trace' => str_replace(["\n", ": "], ["\n\n", ":\n"], $throwable->getTraceAsString()),
+                'type' => $throwable::class,
+                'statusCode' => 500,
                 'xDebugTag' => $this->debugTagStorage->getTag(),
                 'showTrace' => (int)$this->configurationStorage->getOrDefault('DEBUG', 0) === 1
             ]);
